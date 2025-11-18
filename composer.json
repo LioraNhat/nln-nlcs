@@ -1,0 +1,21 @@
+{
+    "name": "lemoncream/nln_nlcs",
+    "description": "My first PHP project using Composer",
+    "type": "project",
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/" 
+        }
+    },
+    "authors": [
+       {
+            "name": "LemonCream",
+            "email": "lemoncream288@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "license": "MIT"
+}
