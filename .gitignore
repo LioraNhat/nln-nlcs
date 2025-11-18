@@ -1,0 +1,11 @@
+# Bo qua thu muc dependencies cua Composer
+/vendor
+
+# Bo qua cac file moi truong (chua thong tin nhay cam)
+.env
+.env.local
+
+# Bo qua cac thu muc thong thuong khac (Neu co)
+/storage
+/public/storage
+/node_modules
