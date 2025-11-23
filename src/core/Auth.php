@@ -1,64 +1,66 @@
 <?php
 
 namespace App\Core;
+
 class Auth {
     
     /**
      * Kiểm tra đã đăng nhập chưa
      */
     public static function check() {
-        return isset($_SESSION['user_id']);
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        return isset($_SESSION['user']);
     }
     
     /**
-     * Lấy thông tin user hiện tại
+     * Lấy thông tin user hiện tại (Trả về đúng mảng từ CSDL)
      */
     public static function user() {
         if (!self::check()) {
             return null;
         }
-        
-        return [
-            'id' => $_SESSION['user_id'] ?? null,
-            'name' => $_SESSION['user_name'] ?? '',
-            'email' => $_SESSION['user_email'] ?? '',
-            'phone' => $_SESSION['user_phone'] ?? '',
-            'gender' => $_SESSION['user_gender'] ?? '',
-            'role_id' => $_SESSION['user_role_id'] ?? '',      // 'AD' hoặc 'KH'
-            'role' => $_SESSION['user_role'] ?? '',          // 'Admin' hoặc 'Khách hàng'
-            'cart_id' => $_SESSION['cart_id'] ?? null
-        ];
+        // Trả về nguyên bản $_SESSION['user'] để khớp với AdminController
+        return $_SESSION['user'];
     }
     
     /**
-     * Lấy ID user
+     * Lấy ID user (ID_TK)
      */
     public static function id() {
-        return $_SESSION['user_id'] ?? null;
+        // Lấy từ mảng user hoặc lấy từ session lẻ đều được
+        return $_SESSION['user_id'] ?? ($_SESSION['user']['ID_TK'] ?? null);
     }
     
     /**
      * Kiểm tra có phải Admin không
      */
     public static function isAdmin() {
-        return self::check() && $_SESSION['user_role_id'] === 'AD';
+        // Kiểm tra key ID_ND trong mảng user
+        return self::check() && isset($_SESSION['user']['ID_ND']) && $_SESSION['user']['ID_ND'] === 'AD';
     }
     
     /**
      * Kiểm tra có phải Khách hàng không
      */
     public static function isCustomer() {
-        return self::check() && $_SESSION['user_role_id'] === 'KH';
+        return self::check() && isset($_SESSION['user']['ID_ND']) && $_SESSION['user']['ID_ND'] === 'KH';
     }
     
+    /**
+     * Helper: Lấy đường dẫn gốc (Fix lỗi Index of /)
+     */
+    private static function getBasePath() {
+        return defined('BASE_PATH') ? BASE_PATH : '/NLN_NLCS/public';
+    }
+
     /**
      * Yêu cầu đăng nhập (dùng trong Controller)
      */
     public static function requireLogin() {
         if (!self::check()) {
             $_SESSION['error'] = 'Vui lòng đăng nhập để tiếp tục';
-            $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
-            header('Location: /auth/login');
+            // Sửa đường dẫn redirect cho đúng
+            header('Location: ' . self::getBasePath() . '/auth/login');
             exit;
         }
     }
@@ -71,7 +73,8 @@ class Auth {
         
         if (!self::isAdmin()) {
             $_SESSION['error'] = 'Bạn không có quyền truy cập khu vực này';
-            header('Location: /');
+            // Sửa đường dẫn redirect về trang chủ dự án
+            header('Location: ' . self::getBasePath() . '/');
             exit;
         }
     }
@@ -80,6 +83,8 @@ class Auth {
      * Đăng xuất
      */
     public static function logout() {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
         $_SESSION = [];
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
@@ -89,23 +94,22 @@ class Auth {
             );
         }
         session_destroy();
-        header('Location: /auth/login');
+        
+        header('Location: ' . self::getBasePath() . '/auth/login');
         exit;
     }
 
     /**
-     * HÀM MỚI (QUAN TRỌNG): Lấy ID Giỏ Hàng của user
+     * Lấy ID Giỏ Hàng của user
      */
     public static function cartId() {
-         return $_SESSION['cart_id'] ?? null;
+         return $_SESSION['cart_id'] ?? ($_SESSION['user']['ID_GH'] ?? null);
     }
 
     /**
-     * HÀM MỚI (BỊ THIẾU): Kiểm tra xem người dùng đã đăng nhập chưa
+     * Kiểm tra đăng nhập (Alias cho check)
      */
     public static function isLoggedIn() {
-        // Chúng ta dựa vào việc 'user_id' có tồn tại trong session hay không
-        return isset($_SESSION['user_id']);
+        return self::check();
     }
-
 }

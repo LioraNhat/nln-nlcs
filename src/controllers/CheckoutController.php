@@ -7,12 +7,14 @@ use App\Core\Auth;
 use App\Models\UserModel;
 use App\Models\OrderModel;
 use App\Models\CartModel;
+use App\Models\AddressModel; // 1. IMPORT MODEL ĐỊA CHỈ
 
 class CheckoutController extends BaseController {
 
     private $userModel;
     private $orderModel;
     private $cartModel;
+    private $addressModel;
 
     public function __construct() {
         parent::__construct(); 
@@ -21,6 +23,7 @@ class CheckoutController extends BaseController {
         $this->userModel = new UserModel();
         $this->orderModel = new OrderModel();
         $this->cartModel = new CartModel();
+        $this->addressModel = new AddressModel(); // 3. KHỞI TẠO MODEL
     }
 
     /**
@@ -78,7 +81,10 @@ class CheckoutController extends BaseController {
             return;
         }
         $user = Auth::user();
-        $addresses = $this->userModel->getAllAddressesByUserId($userId);
+        
+        // SỬA: Gọi từ AddressModel thay vì UserModel
+        $addresses = $this->addressModel->getAddressesByUserId($userId);
+        
         $paymentMethods = $this->orderModel->getAllPaymentMethods();
         $totals = $this->calculateCartTotals($cartItems);
 
@@ -93,7 +99,7 @@ class CheckoutController extends BaseController {
     }
 
     /**
-     * SỬA LẠI HOÀN CHỈNH: Xử lý Đặt hàng
+     * Xử lý Đặt hàng
      */
     public function placeOrder() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -115,7 +121,8 @@ class CheckoutController extends BaseController {
         $selected_address_id = $_POST['selected_address_id']; 
 
         // 3. Lấy và định dạng địa chỉ
-        $address = $this->userModel->findAddressById($userId, $selected_address_id);
+        $address = $this->addressModel->findAddressById($userId, $selected_address_id);
+        
         if (!$address) {
             $this->redirect('/checkout/index'); 
             return;
@@ -126,7 +133,7 @@ class CheckoutController extends BaseController {
         $totals = $this->calculateCartTotals($cartItems);
 
         // 5. Chuẩn bị dữ liệu cho bảng 'don_hang'
-        $newOrderId = $this->orderModel->generateNewOrderId(); // Lấy ID mới
+        $newOrderId = $this->orderModel->generateNewOrderId(); 
         $data = [
             'ID_DH' => $newOrderId,
             'ID_PTTT' => $id_pttt,
@@ -146,12 +153,8 @@ class CheckoutController extends BaseController {
             // Lưu chi tiết đơn hàng
             $this->orderModel->addOrderDetails($newOrderId, $cartItems);
             
-            // ======================================================
-            // THÊM MỚI (BƯỚC QUAN TRỌNG NHẤT): TẠO TRẠNG THÁI "CHỜ XỬ LÝ"
-            // (Sử dụng hàm đã thêm vào OrderModel ở lượt trước)
-            // ======================================================
+            // Tạo trạng thái "Chờ xử lý"
             $this->orderModel->createInitialOrderStatus($newOrderId);
-            // ======================================================
 
             // 7. Dọn dẹp Session và Chuyển hướng
             $userCartId = Auth::cartId();
@@ -170,6 +173,7 @@ class CheckoutController extends BaseController {
 
         } catch (\Exception $e) {
             error_log($e->getMessage());
+            // Có thể thêm flash message lỗi ở đây nếu cần
             $this->redirect('/checkout/index');
         }
     }
@@ -190,7 +194,7 @@ class CheckoutController extends BaseController {
     }
 
     /**
-     * HÀM MỚI: Trang đặt hàng thành công
+     * Trang đặt hàng thành công
      */
     public function success() {
         $lastOrderId = $_SESSION['last_order_id'] ?? null;

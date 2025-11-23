@@ -1,6 +1,19 @@
 // Chờ cho toàn bộ nội dung trang tải xong
 document.addEventListener("DOMContentLoaded", function() {
     
+    // ===============================================
+    // KHAI BÁO CÁC BIẾN TOÀN CỤC
+    // ===============================================
+    const apiHost = "https://provinces.open-api.vn/api/";
+    
+    // Các biến DOM Modal
+    const modalOverlay = document.querySelector('#address-modal-overlay');
+    const modalForm = document.querySelector('#form-address-modal');
+    const modalTitle = document.querySelector('#modal-title');
+    const modalSubmitBtn = document.querySelector('#modal-submit-button');
+    const modalAddressIdInput = document.querySelector('#modal-address-id');
+    const modalMethodInput = document.querySelector('#modal-method-field');
+
     // 1. XỬ LÝ SLIDER (Giữ nguyên)
     const slider = document.querySelector('.hero-slider');
     if (slider) {
@@ -24,8 +37,6 @@ document.addEventListener("DOMContentLoaded", function() {
             verticalNav.classList.toggle('open');
         });
     }
-
-    const modalForm = document.querySelector('#form-address-modal');
 
     // 3. XỬ LÝ HEADER (Đã sửa lỗi cho trang con)
     let lastScrollTop = 0;
@@ -55,9 +66,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // =======================================================
-    // ⬇️ BẠN ĐẶT CODE MỚI VÀO ĐÂY ⬇️
-    // =======================================================
+    // Tự động scroll đến form đăng nhập/đăng ký
     const authForm = document.getElementById('auth-form');
     if (authForm) {
         authForm.scrollIntoView({
@@ -66,19 +75,16 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // =======================================================
     // 4. XỬ LÝ QUICK ADD (ĐÃ NÂNG CẤP LÊN TOAST)
-    // =======================================================
     document.querySelectorAll('.btn-add-to-cart-quick').forEach(button => {
         button.addEventListener('click', function(e) {
-            e.preventDefault(); // Ngăn chặn mọi hành vi mặc định
+            e.preventDefault();
             
             const productId = this.dataset.id; 
             const formData = new FormData();
             formData.append('id_hh', productId);
-            formData.append('quantity', 1); // Nút "thêm nhanh" sẽ luôn thêm 1 sản phẩm
+            formData.append('quantity', 1);
 
-            // Bắt đầu gọi AJAX
             fetch(BASE_PATH + '/cart/add', {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -87,23 +93,17 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // 1. Cập nhật icon giỏ hàng trên header
                     const cartCountSpan = document.querySelector('.cart-count');
                     if (cartCountSpan) {
                         cartCountSpan.textContent = data.cartCount;
                     }
-                    
-                    // 2. HIỂN THỊ TOAST THAY VÌ ALERT
                     showToast('Đã thêm vào giỏ!');
-
                 } else {
-                    // HIỂN THỊ TOAST LỖI
                     showToast(data.message || 'Có lỗi xảy ra!', 'error');
                 }
             })
             .catch(error => { 
                 console.error('Lỗi AJAX:', error); 
-                // HIỂN THỊ TOAST LỖI KẾT NỐI
                 showToast('Lỗi kết nối!', 'error');
             });
         });
@@ -147,7 +147,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // 7. XỬ LÝ TĂNG/GIẢM VÀ TÍNH TIỀN GIỎ HÀNG (Giữ nguyên)
-    
     function recalculateClientTotals() {
         let subtotal = 0;
         let totalDiscount = 0;
@@ -168,6 +167,7 @@ document.addEventListener("DOMContentLoaded", function() {
         document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
         document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
     }
+    
     function updateCart(id_hh, quantity) {
         const formData = new FormData();
         formData.append('id_hh', id_hh);
@@ -194,6 +194,7 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .catch(error => console.error('Lỗi AJAX:', error));
     }
+    
     document.querySelectorAll('.btn-quantity-change').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.dataset.id;
@@ -205,6 +206,7 @@ document.addEventListener("DOMContentLoaded", function() {
             updateCart(id, newQuantity); 
         });
     });
+    
     document.querySelectorAll('.btn-remove-item').forEach(button => {
         button.addEventListener('click', function(e) {
             e.preventDefault(); 
@@ -214,9 +216,11 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     });
+    
     document.querySelectorAll('.cart-item-select').forEach(checkbox => {
         checkbox.addEventListener('change', recalculateClientTotals);
     });
+    
     const selectAllCheckbox = document.querySelector('#cart-select-all');
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener('change', function() {
@@ -230,195 +234,276 @@ document.addEventListener("DOMContentLoaded", function() {
     recalculateClientTotals();
 
     // ===============================================
-    // 8. SỬA LẠI: API TỈNH/THÀNH (ĐỂ LƯU CẢ ID VÀ TÊN)
+    // 8. ĐỊNH NGHĨA CÁC HÀM HỖ TRỢ API ĐỊA CHÍNH (MỚI - TỐI ƯU)
     // ===============================================
-    const apiHost = "https://provinces.open-api.vn/api/";
 
-    // Hàm chung để tải Tỉnh
+    // Hàm tải Tỉnh
     function loadProvinces(selectId, selectedCode = null) {
         const provinceSelect = document.querySelector(selectId);
         if (!provinceSelect) return;
+        
         fetch(apiHost + "?depth=1")
             .then(res => res.json())
             .then(data => {
-                provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>'; // Reset
+                provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
                 data.forEach(province => {
                     const option = new Option(province.name, province.code);
-                    // Tự động chọn nếu có selectedCode
-                    if (province.code == selectedCode) option.selected = true; 
+                    if (province.code == selectedCode) option.selected = true;
                     provinceSelect.options[provinceSelect.options.length] = option;
                 });
-            });
+            })
+            .catch(err => console.error("Lỗi tải tỉnh:", err));
     }
 
-    // Hàm chung để tải Huyện (khi Tỉnh thay đổi)
-    function attachDistrictListener(provinceId, districtId, wardId, hiddenNameFields, selectedCode = null) {
+    // Hàm tải Huyện (khi Tỉnh thay đổi)
+    function attachDistrictListener(provinceId, districtId, wardId, hiddenNameFields = {}, selectedCode = null) {
         const provinceSelect = document.querySelector(provinceId);
         const districtSelect = document.querySelector(districtId);
         const wardSelect = document.querySelector(wardId);
         if (!provinceSelect) return;
 
         provinceSelect.addEventListener('change', function() {
-            districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
-            wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
+            // Reset Huyện & Xã
+            if (districtSelect) districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            if (wardSelect) wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
             
-            const selectedText = this.options[this.selectedIndex].text;
-            if (hiddenNameFields.province) document.querySelector(hiddenNameFields.province).value = (this.value ? selectedText : '');
-            if (hiddenNameFields.district) document.querySelector(hiddenNameFields.district).value = '';
-            if (hiddenNameFields.ward) document.querySelector(hiddenNameFields.ward).value = '';
+            // Lưu tên Tỉnh vào input ẩn
+            if (hiddenNameFields.province && document.querySelector(hiddenNameFields.province)) {
+                const selectedText = this.options[this.selectedIndex]?.text || '';
+                document.querySelector(hiddenNameFields.province).value = (this.value ? selectedText : '');
+            }
+            
+            // Reset tên Huyện & Xã ẩn
+            if (hiddenNameFields.district && document.querySelector(hiddenNameFields.district)) 
+                document.querySelector(hiddenNameFields.district).value = '';
+            if (hiddenNameFields.ward && document.querySelector(hiddenNameFields.ward)) 
+                document.querySelector(hiddenNameFields.ward).value = '';
 
             if (this.value) {
                 fetch(apiHost + "p/" + this.value + "?depth=2")
                     .then(res => res.json())
                     .then(data => {
-                        data.districts.forEach(district => {
-                            const option = new Option(district.name, district.code);
-                            // Tự động chọn nếu có
-                            if (district.code == selectedCode) option.selected = true; 
-                            districtSelect.options[districtSelect.options.length] = option;
-                        });
-                        // Tự động trigger (gọi) sự kiện change của Huyện (để tải Xã)
-                        if (selectedCode) districtSelect.dispatchEvent(new Event('change'));
-                    });
+                        if (districtSelect) {
+                            data.districts.forEach(district => {
+                                const option = new Option(district.name, district.code);
+                                if (district.code == selectedCode) option.selected = true;
+                                districtSelect.options[districtSelect.options.length] = option;
+                            });
+                            districtSelect.disabled = false;
+                            if (selectedCode) districtSelect.dispatchEvent(new Event('change'));
+                        }
+                    })
+                    .catch(err => console.error("Lỗi tải huyện:", err));
+            } else {
+                if (districtSelect) districtSelect.disabled = true;
+                if (wardSelect) wardSelect.disabled = true;
             }
         });
     }
 
-    // Hàm chung để tải Xã (khi Huyện thay đổi)
-    function attachWardListener(districtId, wardId, hiddenNameFields, selectedCode = null) {
+    // Hàm tải Xã (khi Huyện thay đổi)
+    function attachWardListener(districtId, wardId, hiddenNameFields = {}, selectedCode = null) {
         const districtSelect = document.querySelector(districtId);
         const wardSelect = document.querySelector(wardId);
         if (!districtSelect) return;
 
         districtSelect.addEventListener('change', function() {
-            wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
+            if (wardSelect) wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
             
-            const selectedText = this.options[this.selectedIndex].text;
-            if (hiddenNameFields.district) document.querySelector(hiddenNameFields.district).value = (this.value ? selectedText : '');
-            if (hiddenNameFields.ward) document.querySelector(hiddenNameFields.ward).value = '';
+            // Lưu tên Huyện
+            if (hiddenNameFields.district && document.querySelector(hiddenNameFields.district)) {
+                const selectedText = this.options[this.selectedIndex]?.text || '';
+                document.querySelector(hiddenNameFields.district).value = (this.value ? selectedText : '');
+            }
+            // Reset tên Xã ẩn
+            if (hiddenNameFields.ward && document.querySelector(hiddenNameFields.ward)) 
+                document.querySelector(hiddenNameFields.ward).value = '';
 
             if (this.value) {
                 fetch(apiHost + "d/" + this.value + "?depth=2")
                     .then(res => res.json())
                     .then(data => {
-                        data.wards.forEach(ward => {
-                            const option = new Option(ward.name, ward.code);
-                            // Tự động chọn nếu có
-                            if (ward.code == selectedCode) option.selected = true; 
-                            wardSelect.options[wardSelect.options.length] = option;
-                        });
-                        // Tự động trigger (gọi) sự kiện change của Xã (để lưu tên)
-                        if (selectedCode) wardSelect.dispatchEvent(new Event('change'));
-                    });
+                        if (wardSelect) {
+                            data.wards.forEach(ward => {
+                                const option = new Option(ward.name, ward.code);
+                                if (ward.code == selectedCode) option.selected = true;
+                                wardSelect.options[wardSelect.options.length] = option;
+                            });
+                            wardSelect.disabled = false;
+                            if (selectedCode) wardSelect.dispatchEvent(new Event('change'));
+                        }
+                    })
+                    .catch(err => console.error("Lỗi tải xã:", err));
+            } else {
+                if (wardSelect) wardSelect.disabled = true;
             }
         });
-        
-        // Sự kiện cuối cùng: Lưu tên Xã
+
+        // Sự kiện lưu tên Xã
         if (wardSelect && hiddenNameFields.ward) {
             wardSelect.addEventListener('change', function() {
-                const selectedText = this.options[this.selectedIndex].text;
-                document.querySelector(hiddenNameFields.ward).value = (this.value ? selectedText : '');
+                const inputHidden = document.querySelector(hiddenNameFields.ward);
+                if (inputHidden) {
+                    const selectedText = this.options[this.selectedIndex]?.text || '';
+                    inputHidden.value = (this.value ? selectedText : '');
+                }
             });
         }
     }
 
-    // A. Chạy API cho trang CHECKOUT (Không cần lưu tên)
-    loadProvinces("#province");
-    attachDistrictListener("#province", "#district", "#ward", {}); 
-    attachWardListener("#district", "#ward", {});
-    
-    // B. Chạy API cho MODAL trang PROFILE (Cần lưu tên)
-    const modalHiddens = {
-        province: '#province-name-modal',
-        district: '#district-name-modal',
-        ward: '#ward-name-modal'
-    };
-    loadProvinces("#province-modal");
-    attachDistrictListener("#province-modal", "#district-modal", "#ward-modal", modalHiddens);
-    attachWardListener("#district-modal", "#ward-modal", modalHiddens);
-    
+    // ===============================================
+    // 9. KHỞI CHẠY LOGIC ĐỊA CHỈ
+    // ===============================================
+
+    // A. Trang CHECKOUT
+    if (document.querySelector("#province")) {
+        loadProvinces("#province");
+        attachDistrictListener("#province", "#district", "#ward", {}); 
+        attachWardListener("#district", "#ward", {});
+    }
+
+    // B. Trang PROFILE (Modal)
+    if (document.querySelector("#province-modal")) {
+        const modalHiddens = {
+            province: '#province-name-modal',
+            district: '#district-name-modal',
+            ward: '#ward-name-modal'
+        };
+        loadProvinces("#province-modal");
+        attachDistrictListener("#province-modal", "#district-modal", "#ward-modal", modalHiddens);
+        attachWardListener("#district-modal", "#ward-modal", modalHiddens);
+    }
 
     // ===============================================
-    // 9. SỬA LẠI: LOGIC MODAL (CHO CẢ THÊM VÀ SỬA)
+    // 10. XỬ LÝ MODAL: THÊM & SỬA ĐỊA CHỈ (MỚI - TỐI ƯU)
     // ===============================================
-    const modalOverlay = document.querySelector('#address-modal-overlay');
-    const modalTitle = document.querySelector('#modal-title');
-    const modalSubmitBtn = document.querySelector('#modal-submit-button');
-    const modalAddressIdInput = document.querySelector('#modal-address-id');
-    const modalMethodInput = document.querySelector('#modal-method-field');
 
     // Nút "+ Thêm địa chỉ mới"
-    document.querySelector('#btn-show-add-modal')?.addEventListener('click', () => {
-        // 1. Reset form về rỗng
-        modalForm.reset(); 
-        document.querySelector("#district-modal").innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
-        document.querySelector("#ward-modal").innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
-        
-        // 2. Chuyển sang chế độ "THÊM MỚI"
-        modalTitle.textContent = 'Địa chỉ mới';
-        modalSubmitBtn.textContent = 'Lưu địa chỉ';
-        modalForm.action = BASE_PATH + '/account/handleAddAddress'; // URL để Thêm
-        modalMethodInput.value = ''; // Không cần _method
-        modalAddressIdInput.value = ''; // Xóa ID
+    const btnAddAddr = document.querySelector('#btn-show-add-modal');
+    if (btnAddAddr && modalOverlay && modalForm) {
+        btnAddAddr.addEventListener('click', () => {
+            // Reset form
+            modalForm.reset(); 
+            if (document.querySelector("#district-modal")) {
+                document.querySelector("#district-modal").innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                document.querySelector("#district-modal").disabled = true;
+            }
+            if (document.querySelector("#ward-modal")) {
+                document.querySelector("#ward-modal").innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
+                document.querySelector("#ward-modal").disabled = true;
+            }
+            
+            // Chuyển sang chế độ THÊM
+            if (modalTitle) modalTitle.textContent = 'Địa chỉ mới';
+            if (modalSubmitBtn) modalSubmitBtn.textContent = 'Lưu địa chỉ';
+            modalForm.action = BASE_PATH + '/account/handleAddAddress';
+            if (modalAddressIdInput) modalAddressIdInput.value = '';
 
-        // 3. Hiện Modal
-        modalOverlay.style.display = 'flex';
-    });
-    
-    // Nút "Sửa" (Tất cả các nút sửa)
-    document.querySelectorAll('.btn-edit-address').forEach(button => {
-        button.addEventListener('click', (e) => {
+            modalOverlay.style.display = 'flex';
+        });
+    }
+
+    // Nút "Sửa" (Event Delegation - TỐI ƯU HƠN)
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('btn-edit-address')) {
             e.preventDefault();
             const addressId = e.target.dataset.id;
             
-            // 1. Gọi API (Giai đoạn 3) để lấy dữ liệu
+            // Gọi API lấy dữ liệu địa chỉ
             fetch(BASE_PATH + '/account/getAddressJson/' + addressId)
                 .then(res => res.json())
                 .then(result => {
                     if (result.success) {
                         const addr = result.data;
                         
-                        // 2. Điền (Populate) dữ liệu vào Form
+                        // 1. Điền các trường thông tin cơ bản
                         document.querySelector('#modal_ho_ten').value = addr.TEN_NGUOI_NHAN;
                         document.querySelector('#modal_sdt_gh').value = addr.SDT_GH;
                         document.querySelector('#modal_dia_chi_chi_tiet').value = addr.DIA_CHI_CHI_TIET;
                         document.querySelector('#modal_is_default').checked = (addr.IS_DEFAULT == 1);
+                        document.querySelector('#modal-address-id').value = addressId;
                         
-                        // 3. Xử lý API Tỉnh/Huyện/Xã (Tự động tải lại)
-                        // (Vì API load chậm, chúng ta sẽ trigger Tỉnh, Huyện, Xã)
-                        loadProvinces("#province-modal", addr.ID_TINH_TP);
-                        attachDistrictListener("#province-modal", "#district-modal", "#ward-modal", modalHiddens, addr.ID_QUAN_HUYEN);
-                        attachWardListener("#district-modal", "#ward-modal", modalHiddens, addr.ID_XA_PHUONG);
-                        // Trigger Tỉnh để tải Huyện
-                        setTimeout(() => { 
-                            document.querySelector("#province-modal").dispatchEvent(new Event('change'));
-                        }, 500); // Chờ 0.5s để Tỉnh tải xong
-                        
-                        // 4. Chuyển sang chế độ "SỬA"
-                        modalTitle.textContent = 'Sửa địa chỉ';
-                        modalSubmitBtn.textContent = 'Cập nhật địa chỉ';
-                        modalForm.action = BASE_PATH + '/account/handleUpdateAddress'; // URL để Sửa
-                        modalAddressIdInput.value = addressId; // Đặt ID để gửi
-                        
-                        // 5. Hiện Modal
-                        modalOverlay.style.display = 'flex';
+                        // 2. Load Tỉnh/Thành phố
+                        return fetch(apiHost + "?depth=1")
+                            .then(res => res.json())
+                            .then(provinces => {
+                                const provinceSelect = document.querySelector("#province-modal");
+                                provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
+                                
+                                provinces.forEach(p => {
+                                    const option = new Option(p.name, p.code);
+                                    if (p.code == addr.ID_TINH_TP) option.selected = true;
+                                    provinceSelect.options.add(option);
+                                });
+                                
+                                // Cập nhật hidden input
+                                document.querySelector('#province-name-modal').value = addr.TEN_TINH_TP;
+                                
+                                // 3. Load Quận/Huyện
+                                return fetch(apiHost + "p/" + addr.ID_TINH_TP + "?depth=2");
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                const districtSelect = document.querySelector("#district-modal");
+                                districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+                                
+                                data.districts.forEach(d => {
+                                    const option = new Option(d.name, d.code);
+                                    if (d.code == addr.ID_QUAN_HUYEN) option.selected = true;
+                                    districtSelect.options.add(option);
+                                });
+                                districtSelect.disabled = false;
+                                
+                                // Cập nhật hidden input
+                                document.querySelector('#district-name-modal').value = addr.TEN_QUAN_HUYEN;
+                                
+                                // 4. Load Xã/Phường
+                                return fetch(apiHost + "d/" + addr.ID_QUAN_HUYEN + "?depth=2");
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                const wardSelect = document.querySelector("#ward-modal");
+                                wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
+                                
+                                data.wards.forEach(w => {
+                                    const option = new Option(w.name, w.code);
+                                    if (w.code == addr.ID_XA_PHUONG) option.selected = true;
+                                    wardSelect.options.add(option);
+                                });
+                                wardSelect.disabled = false;
+                                
+                                // Cập nhật hidden input
+                                document.querySelector('#ward-name-modal').value = addr.TEN_XA_PHUONG;
+                            });
+                    } else {
+                        showToast('Không tìm thấy thông tin địa chỉ', 'error');
                     }
+                })
+                .then(() => {
+                    // 5. Chuyển sang chế độ SỬA và hiện modal
+                    document.querySelector('#modal-title').textContent = 'Sửa địa chỉ';
+                    document.querySelector('#modal-submit-button').textContent = 'Cập nhật địa chỉ';
+                    document.querySelector('#form-address-modal').action = BASE_PATH + '/account/handleAddAddress';
+                    document.querySelector('#address-modal-overlay').style.display = 'flex';
+                })
+                .catch(err => {
+                    console.error('Lỗi load địa chỉ:', err);
+                    showToast('Lỗi khi tải dữ liệu địa chỉ!', 'error');
                 });
-        });
-    });
-
-    // Nút "X" (Đóng Modal)
-    document.querySelector('#btn-close-address-modal')?.addEventListener('click', () => {
-        modalOverlay.style.display = 'none';
-    });
-    // Bấm ra ngoài (Đóng Modal)
-    modalOverlay?.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-            modalOverlay.style.display = 'none';
         }
     });
 
-    // Tự động submit form khi chọn Radio (Giữ nguyên)
+    // Đóng Modal
+    document.querySelector('#btn-close-address-modal')?.addEventListener('click', () => {
+        if (modalOverlay) modalOverlay.style.display = 'none';
+    });
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) modalOverlay.style.display = 'none';
+        });
+    }
+
+    // Tự động submit form khi chọn Radio
     const formSetDefault = document.querySelector('#form-set-default-address');
     if (formSetDefault) {
         document.querySelectorAll('.address-radio').forEach(radio => {
@@ -430,27 +515,83 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // =======================================================
-    // 10. XỬ LÝ AJAX CHO FORM "THÊM VÀO GIỎ" (TRANG CHI TIẾT)
-    // =======================================================
-
-    // 1. Tìm form trên trang chi tiết (form có class .add-to-cart-form)
-    const detailAddToCartForm = document.querySelector('.add-to-cart-form');
-    
-    // 2. Chỉ chạy code nếu tìm thấy form này
-    if (detailAddToCartForm) {
-        
-        // 3. Gắn sự kiện "submit" cho form
-        detailAddToCartForm.addEventListener('submit', function(event) {
+    // ===============================================
+    // 11. XỬ LÝ AJAX SUBMIT FORM ĐỊA CHỈ (MỚI - TỐI ƯU)
+    // ===============================================
+    if (modalForm) {
+        modalForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            // 4. NGĂN CHẶN form gửi đi và tải lại trang
+            // Validate
+            if (!document.querySelector("#province-modal").value) {
+                showToast("Vui lòng chọn Tỉnh/Thành phố", "error");
+                return;
+            }
+            
+            const formData = new FormData(modalForm);
+            const formAction = modalForm.getAttribute('action');
+            const submitButton = modalForm.querySelector('#modal-submit-button');
+            
+            submitButton.disabled = true;
+            submitButton.textContent = 'Đang lưu...';
+
+            fetch(formAction, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Lưu địa chỉ thành công!');
+                    if (modalOverlay) modalOverlay.style.display = 'none';
+                    
+                    // Cập nhật hoặc reload
+                    if (document.querySelector('.address-list-checkout')) {
+                        updateAddressList(data.newAddresses);
+                    } else {
+                        location.reload(); 
+                    }
+                } else {
+                    showToast('Lỗi! Không thể lưu địa chỉ.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Lỗi AJAX:', error);
+                showToast('Lỗi kết nối!', 'error');
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Lưu địa chỉ';
+            });
+        });
+    }
+
+    // Xử lý nút Xóa địa chỉ
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('delete-address-btn')) {
+            e.preventDefault();
+
+            const addressId = e.target.dataset.id;
+
+            if (confirm('Bạn có chắc muốn xóa địa chỉ này?')) {
+                window.location.href = BASE_PATH + '/account/deleteAddress/' + addressId;
+            }
+        }
+    });
+
+
+    // ===============================================
+    // 12. XỬ LÝ AJAX CHO FORM "THÊM VÀO GIỎ" (TRANG CHI TIẾT)
+    // ===============================================
+    const detailAddToCartForm = document.querySelector('.add-to-cart-form');
+    if (detailAddToCartForm) {
+        detailAddToCartForm.addEventListener('submit', function(event) {
             event.preventDefault(); 
             
-            // 5. Lấy dữ liệu từ form (bao gồm cả ID và số lượng)
             const formData = new FormData(detailAddToCartForm);
             const formAction = detailAddToCartForm.getAttribute('action'); 
 
-            // 6. Gửi dữ liệu bằng AJAX (fetch)
             fetch(formAction, {
                 method: 'POST',
                 body: formData,
@@ -459,73 +600,29 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(response => response.json()) 
             .then(data => {
                 if (data.success) {
-                    
-                    // ===============================================
-                    // SỬA LỖI: Thêm 4 dòng này
-                    // ===============================================
-                    // 1. Cập nhật icon giỏ hàng trên header
                     const cartCountSpan = document.querySelector('.cart-count');
                     if (cartCountSpan) {
                         cartCountSpan.textContent = data.cartCount;
                     }
-                    // ===============================================
-                    
                     showToast('Đã thêm vào giỏ!');
-
                 } else {
                     showToast(data.message || 'Có lỗi xảy ra!', 'error');
                 }
             })
             .catch(error => {
                 console.error('Lỗi AJAX:', error);
-                alert('Có lỗi kết nối, vui lòng thử lại.');
+                showToast('Có lỗi kết nối!', 'error');
             });
         });
     }
 
-    // ... (Phần còn lại của file main.js giữ nguyên) ...
-
-    // HÀM HELPER: HIỂN THỊ TOAST NOTIFICATION
-    function showToast(message, type = 'success') {
-        // 1. Tạo 1 div mới
-        const toast = document.createElement('div');
-        
-        // 2. Thêm class cho nó
-        toast.classList.add('toast-notification');
-        if (type === 'error') {
-            toast.classList.add('toast-error');
-        }
-
-        // 3. Đặt nội dung
-        toast.innerText = message;
-
-        // 4. Thêm vào trang web
-        document.body.appendChild(toast);
-
-        // 5. Tự động mờ đi sau 3 giây
-        setTimeout(() => {
-            toast.classList.add('fade-out');
-        }, 2000); // 2000ms = 2 giây
-
-        // 6. Tự động xóa khỏi DOM sau khi mờ xong (3.5 giây)
-        setTimeout(() => {
-            toast.remove();
-        }, 3500); // 3000ms + 500ms (animation)
-    }
-
-    // =======================================================
-    // 11. XỬ LÝ NÚT LÀM TRỐNG GIỎ HÀNG (AJAX)
-    // (Đây là code mới bạn cần thêm)
-    // =======================================================
+    // ===============================================
+    // 13. XỬ LÝ NÚT LÀM TRỐNG GIỎ HÀNG
+    // ===============================================
     const btnClearCart = document.querySelector('#btn-clear-cart');
-    
     if (btnClearCart) {
         btnClearCart.addEventListener('click', function() {
-            
-            // 1. Hỏi xác nhận
             if (confirm('Bạn có chắc muốn xóa tất cả sản phẩm khỏi giỏ hàng?')) {
-                
-                // 2. Gọi AJAX đến Controller (hàm clear() bạn vừa tạo)
                 fetch(BASE_PATH + '/cart/clear', {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -533,18 +630,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // 3. Cập nhật icon giỏ hàng trên header
                         const cartCountSpan = document.querySelector('.cart-count');
                         if (cartCountSpan) {
-                            cartCountSpan.textContent = data.cartCount; // Sẽ là 0
+                            cartCountSpan.textContent = data.cartCount;
                         }
-                        
-                        // 4. HIỂN THỊ GIỎ HÀNG TRỐNG:
                         location.reload();
-                        
                     } else {
-                        // Sử dụng hàm showToast (nếu bạn đã thêm)
-                        showToast('Có lỗi xảy ra, không thể làm trống giỏ hàng!', 'error');
+                        showToast('Có lỗi xảy ra!', 'error');
                     }
                 })
                 .catch(error => {
@@ -555,112 +647,64 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // =======================================================
-    // 12. TỰ ĐỘNG ĐÓNG MENU KHI BẤM RA NGOÀI
-    // =======================================================
-    
-    // Lấy 2 đối tượng: Nút mở (menu-toggle) và Menu (vertical-nav)
+    // ===============================================
+    // 14. TỰ ĐỘNG ĐÓNG MENU KHI BẤM RA NGOÀI
+    // ===============================================
     const verticalNavForClose = document.querySelector('.vertical-nav');
     const menuToggleForClose = document.querySelector('.menu-toggle');
-
-    // Chỉ chạy nếu 2 đối tượng này tồn tại
     if (verticalNavForClose && menuToggleForClose) {
-        
         document.addEventListener('click', function(event) {
-            // Kiểm tra xem menu có đang mở không
             const isMenuOpen = verticalNavForClose.classList.contains('open');
-            
-            // Kiểm tra xem vị trí bấm có phải là BÊN NGOÀI menu
             const isClickOutsideNav = !verticalNavForClose.contains(event.target);
-            
-            // Kiểm tra xem vị trí bấm có phải là BÊN NGOÀI nút 3 gạch
             const isClickOutsideToggle = !menuToggleForClose.contains(event.target);
 
-            // Nếu menu đang mở VÀ bấm ra ngoài cả 2
             if (isMenuOpen && isClickOutsideNav && isClickOutsideToggle) {
-                verticalNavForClose.classList.remove('open'); // Đóng menu
+                verticalNavForClose.classList.remove('open');
             }
         });
     }
 
-    // =======================================================
-    // 13. KIỂM TRA GIỎ HÀNG TRƯỚC KHI SUBMIT (ĐÃ SỬA LỖI)
-    // =======================================================
+    // ===============================================
+    // 15. KIỂM TRA GIỎ HÀNG TRƯỚC KHI SUBMIT
+    // ===============================================
     const cartCheckoutForm = document.querySelector('#form-cart-checkout');
-    
     if (cartCheckoutForm) {
         cartCheckoutForm.addEventListener('submit', function(event) {
             const checkedItems = cartCheckoutForm.querySelectorAll('.cart-item-select:checked');
-            
-            // 2. Nếu không có ô nào được tick
             if (checkedItems.length === 0) {
-                
-                // 2a. Ngăn form gửi đi
                 event.preventDefault(); 
-                
-                // 2b. Cảnh báo người dùng (dùng toast hoặc alert)
-                if (typeof showToast === 'function') {
-                    showToast('Bạn ơi, vui lòng chọn ít nhất 1 sản phẩm!', 'error');
-                } else {
-                    alert('Bạn ơi, vui lòng chọn ít nhất 1 sản phẩm để thanh toán nhé!');
-                }
+                showToast('Bạn ơi, vui lòng chọn ít nhất 1 sản phẩm!', 'error');
             }
         });
     }
 
-    // =======================================================
-    // 14. XỬ LÝ SUBMIT MODAL ĐỊA CHỈ BẰNG AJAX
-    // =======================================================
-    
-    if (modalForm) {
-        modalForm.addEventListener('submit', function(e) {
-            // 1. Ngăn chặn form submit (gây reload)
-            e.preventDefault(); 
-            const formData = new FormData(modalForm);
-            const formAction = modalForm.getAttribute('action');
-            const submitButton = modalForm.querySelector('#modal-submit-button');
-            submitButton.disabled = true; // Vô hiệu hóa nút
-            submitButton.textContent = 'Đang lưu...';
-
-            // 2. Gửi dữ liệu bằng AJAX
-            fetch(formAction, {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('Đã lưu địa chỉ thành công!');
-                    document.querySelector('#address-modal-overlay').style.display = 'none';
-                    updateAddressList(data.newAddresses);
-                    
-                } else {
-                    showToast('Lỗi! Không thể lưu địa chỉ.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Lỗi AJAX (Modal):', error);
-                showToast('Lỗi kết nối!', 'error');
-            })
-            .finally(() => {
-                submitButton.disabled = false;
-                submitButton.textContent = 'Lưu địa chỉ';
-            });
-        });
+    // ===============================================
+    // HÀM HELPER: HIỂN THỊ TOAST NOTIFICATION
+    // ===============================================
+    window.showToast = function(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.classList.add('toast-notification');
+        if (type === 'error') toast.classList.add('toast-error');
+        toast.innerText = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('fade-out'), 2000);
+        setTimeout(() => toast.remove(), 3500);
     }
+
 });
 
 /* =======================================================
  * HÀM HELPER: VẼ LẠI DANH SÁCH ĐỊA CHỈ (TRANG CHECKOUT)
+ * (Đặt các hàm này ở ngoài cùng, cuối file)
  * ======================================================= */
 function updateAddressList(addresses) {
     const listElement = document.querySelector('.address-list-checkout');
     const checkoutButton = document.querySelector('.btn-checkout');
-    if (!listElement) {
-        return; 
-    }
+    
+    if (!listElement) return; 
+    
     listElement.innerHTML = ''; 
+    
     if (!addresses || addresses.length === 0) {
         listElement.innerHTML = '<p style="color: red; font-weight: 600;">Bạn chưa có địa chỉ nào!</p><p>Vui lòng thêm địa chỉ mới.</p>';
         if (checkoutButton) {
@@ -670,28 +714,28 @@ function updateAddressList(addresses) {
         return;
     }
 
-    // 5. Nếu có địa chỉ -> Bật nút Đặt hàng
+    // Có địa chỉ -> Bật nút Đặt hàng
     if (checkoutButton) {
         checkoutButton.disabled = false;
         checkoutButton.textContent = 'ĐẶT HÀNG';
     }
 
-    // 6. Kiểm tra xem có địa chỉ mặc định không
+    // Kiểm tra xem có địa chỉ mặc định không
     const hasDefault = addresses.some(a => a.IS_DEFAULT == 1);
 
-    // 7. Lặp và tạo lại HTML cho từng địa chỉ
+    // Lặp và tạo HTML
     addresses.forEach((addr, index) => {
         let isChecked = false;
+        // Logic chọn radio: Ưu tiên mặc định, nếu không có thì chọn cái đầu tiên
         if (hasDefault) {
             if (addr.IS_DEFAULT == 1) isChecked = true;
         } else {
-            if (index === 0) isChecked = true; // Tự động check cái đầu tiên
+            if (index === 0) isChecked = true;
         }
 
         const defaultTag = (addr.IS_DEFAULT == 1) ? '<span class="default-tag-small">Mặc định</span>' : '';
         const checkedAttr = isChecked ? 'checked' : '';
 
-        // Tạo HTML
         const itemHtml = `
             <div class="form-group-radio">
                 <input type="radio" 
@@ -717,7 +761,7 @@ function updateAddressList(addresses) {
     });
 }
 
-// Hàm bảo mật nhỏ để tránh lỗi XSS khi chèn HTML
+// Hàm bảo mật tránh lỗi XSS
 function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return str.toString()
@@ -727,4 +771,3 @@ function escapeHTML(str) {
               .replace(/"/g, '&quot;')
               .replace(/'/g, '&#039;');
 }
-    

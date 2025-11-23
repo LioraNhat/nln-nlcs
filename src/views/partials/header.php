@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NLN - Thực Phẩm Sạch</title>
     <link rel="stylesheet" href="<?php echo BASE_PATH; ?>/css/style.css">
-    <script>const BASE_PATH = "<?php echo BASE_PATH; ?>";</script>
+    <script>const BASE_PATH ="<?php echo BASE_PATH; ?>";</script>
 </head>
 <body>
 

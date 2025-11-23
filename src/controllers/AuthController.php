@@ -25,6 +25,7 @@ class AuthController extends BaseController {
      * SỬA: Xử lý POST từ form đăng nhập (dùng SĐT/Email)
      */
     public function handleLogin() {
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $username = $_POST['username'];
@@ -41,10 +42,11 @@ class AuthController extends BaseController {
                 $_SESSION['cart_id'] = $user['ID_GH'];
                 $_SESSION['user_role_id'] = $user['ID_ND'];
                 $_SESSION['user_role'] = $user['PHAN_QUYEN_TK'];
+                $_SESSION['user'] = $user;
 
                 // Logic phân quyền
                 if ($user['ID_ND'] === 'AD') {
-                    $this->redirect('/admin/index');
+                    $this->redirect('/admin/dashboard');
                 } else {
                     // ===============================================
                     // BƯỚC 3: GỘP GIỎ HÀNG (CODE SẠCH)
