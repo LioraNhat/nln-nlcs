@@ -12,10 +12,21 @@ $user = $_SESSION['user'] ?? [];
     </div>
     
     <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
+            <div class="alert alert-success">
+                <?php 
+                    echo $_SESSION['success']; 
+                    unset($_SESSION['success']); // Hiển thị xong thì xóa ngay tại đây
+                ?>
+            </div>
     <?php endif; ?>
+
     <?php if (isset($_SESSION['error'])): ?>
-        <div class="alert alert-error"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
+        <div class="alert alert-error">
+            <?php 
+                echo $_SESSION['error']; 
+                unset($_SESSION['error']); // Hiển thị xong thì xóa ngay tại đây
+            ?>
+        </div>
     <?php endif; ?>
 
     <div class="profile-layout"> 

@@ -151,6 +151,10 @@ require_once __DIR__ . '/../layouts/sidebar.php';
     </div>
 </main>
 
+<?php
+require_once __DIR__ . '/../layouts/footer.php';
+?>
+
 <script>
     function confirmDelete(id) {
         if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
@@ -158,7 +162,3 @@ require_once __DIR__ . '/../layouts/sidebar.php';
         }
     }
 </script>
-
-<?php
-require_once __DIR__ . '/../layouts/footer.php';
-?>

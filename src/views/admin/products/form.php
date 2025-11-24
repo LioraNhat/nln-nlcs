@@ -156,6 +156,8 @@ $currentId = $isEdit ? $product['ID_HH'] : '';
     </div>
 </main>
 
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>
+
 <script>
     // Hàm xem trước ảnh khi chọn file
     function previewImage(input) {
@@ -168,5 +170,3 @@ $currentId = $isEdit ? $product['ID_HH'] : '';
         }
     }
 </script>
-
-<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

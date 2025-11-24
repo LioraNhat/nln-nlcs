@@ -54,24 +54,38 @@ class AccountController extends BaseController {
         ]);
     }
 
+    // Trong AccountController
+    public function orderDetail($id) {
+        // Gọi Model lấy chi tiết đơn hàng (Giả sử bạn đã có hàm getOrderById và getOrderItems trong OrderModel)
+        $orderModel = new \App\Models\OrderModel();
+        $order = $orderModel->getOrderById($id);
+        $items = $orderModel->getOrderItems($id);
+
+        // Kiểm tra xem đơn hàng có thuộc về user đang đăng nhập không (Bảo mật)
+        if (!$order || $order['ID_TK'] !== $_SESSION['user']['ID_TK']) {
+            $_SESSION['error'] = "Không tìm thấy đơn hàng hoặc bạn không có quyền xem.";
+            $this->redirect('/account/index');
+        }
+
+        $this->renderView('account/order-detail', [
+            'order' => $order,
+            'items' => $items
+        ]);
+    }
+
     /**
      * Trang "Quản lý tài khoản"
      */
     public function profile() {
         $userId = Auth::id();
-        // SỬA: Gọi AddressModel để lấy danh sách địa chỉ
+        // Lấy danh sách địa chỉ
         $addresses = $this->addressModel->getAddressesByUserId($userId);
-        
-        $success = $_SESSION['success'] ?? null;
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['success'], $_SESSION['error']); 
-        
+
+        // Render View (Không cần truyền biến success/error vào mảng data nữa)
         $this->renderView('account/profile', [
             'title' => 'Quản lý tài khoản',
             'user' => Auth::user(),
-            'addresses' => $addresses, 
-            'success' => $success,
-            'error' => $error
+            'addresses' => $addresses
         ]);
     }
 
@@ -210,23 +224,26 @@ class AccountController extends BaseController {
         $this->redirect('/account/profile');
     }
 
+
     /**
      * Xử lý cập nhật thông tin cá nhân
      */
     public function handleUpdateProfile() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = Auth::id();
-            $data = [
-                'ho_ten' => $_POST['ho_ten'],
-                'sdt_tk' => $_POST['sdt_tk'],
-                'gioi_tinh' => $_POST['gioi_tinh']
-            ];
-            
-            if ($this->userModel->updateProfile($userId, $data)) {
-                // QUAN TRỌNG: Cập nhật Session ngay lập tức
-                $_SESSION['user']['HO_TEN'] = $data['ho_ten'];
-                $_SESSION['user']['SDT_TK'] = $data['sdt_tk'];
-                $_SESSION['user']['GIOI_TINH'] = $data['gioi_tinh'];
+            // Lấy dữ liệu từ Form
+            $userId = $_SESSION['user']['ID_TK'];
+            $hoTen = $_POST['ho_ten'];
+            $sdt = $_POST['sdt_tk'];
+            $gioiTinh = $_POST['gioi_tinh'];
+
+            // Gọi Model cập nhật
+            $result = $this->userModel->updateProfile($userId, $hoTen, $sdt, $gioiTinh);
+
+            if ($result) {
+                // QUAN TRỌNG: Cập nhật lại Session ngay lập tức để hiển thị đúng trên Header/Profile
+                $_SESSION['user']['HO_TEN'] = $hoTen;
+                $_SESSION['user']['SDT_TK'] = $sdt;
+                $_SESSION['user']['GIOI_TINH'] = $gioiTinh;
                 
                 $_SESSION['success'] = 'Cập nhật thông tin thành công!';
             } else {
@@ -237,30 +254,51 @@ class AccountController extends BaseController {
         }
     }
 
+    
     /**
      * Xử lý đổi mật khẩu
      */
     public function handleChangePassword() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = Auth::id();
+            $userId = $_SESSION['user']['ID_TK'];
             $currentPass = $_POST['current_password'];
             $newPass = $_POST['new_password'];
             $confirmPass = $_POST['new_password_confirm'];
             
+            // 1. Kiểm tra xác nhận mật khẩu
             if ($newPass !== $confirmPass) {
-                $_SESSION['error'] = 'Mật khẩu mới không khớp.';
+                $_SESSION['error'] = 'Mật khẩu mới và xác nhận mật khẩu không khớp.';
                 $this->redirect('/account/profile'); 
                 return;
             }
+
+            // 2. Lấy thông tin user để kiểm tra mật khẩu cũ
+            // Lưu ý: Dùng hàm getUserById trong UserModel để lấy MAT_KHAU
+            $user = $this->userModel->getUserById($userId);
+
+            if (!$user) {
+                $_SESSION['error'] = 'Không tìm thấy tài khoản.';
+                $this->redirect('/account/profile');
+                return;
+            }
+
+            // 3. Kiểm tra mật khẩu cũ (Quan trọng)
+            if (!password_verify($currentPass, $user['MAT_KHAU'])) {
+                $_SESSION['error'] = 'Mật khẩu hiện tại không đúng.'; // Dòng này sẽ hiện lên View sau khi sửa Bước 1
+                $this->redirect('/account/profile');
+                return;
+            }
             
-            $result = $this->userModel->changePassword($userId, $currentPass, $newPass);
+            // 4. Mã hóa và cập nhật
+            $newPassHash = password_hash($newPass, PASSWORD_DEFAULT);
             
-            if ($result === true) {
+            // Gọi hàm updatePassword từ UserModel
+            if ($this->userModel->updatePassword($userId, $newPassHash)) {
                 $_SESSION['success'] = 'Đổi mật khẩu thành công!';
             } else {
-                // result trả về chuỗi lỗi
-                $_SESSION['error'] = $result; 
+                $_SESSION['error'] = 'Lỗi hệ thống, không thể cập nhật mật khẩu.';
             }
+
             $this->redirect('/account/profile');
         }
     }

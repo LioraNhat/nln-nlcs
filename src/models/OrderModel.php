@@ -186,53 +186,34 @@ class OrderModel extends BaseModel {
         }
     }
 
-    // ============================================
-    // CÁC PHƯƠNG THỨC CHO ADMIN (MỚI THÊM)
-    // ============================================
-
     /**
-     * Lấy tổng số đơn hàng (Dashboard)
+     * =================================================================
+     * PHẦN 3: CÁC HÀM THỐNG KÊ (DÙNG CHO DASHBOARD)
+     * =================================================================
      */
+
     public function getTotalOrders() {
-        $sql = "SELECT COUNT(*) as total FROM don_hang";
-        $stmt = $this->db->query($sql);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ? (int)$result['total'] : 0;
+        $stmt = $this->db->query("SELECT COUNT(*) as total FROM don_hang");
+        return $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
     }
 
-    /**
-     * Lấy tổng doanh thu (Dashboard)
-     */
     public function getTotalRevenue() {
-        $sql = "SELECT SUM(SO_TIEN_THANH_TOAN) as total 
-                FROM don_hang 
-                WHERE TRANG_THAI_THANH_TOAN = 'Đã thanh toán'";
-        $stmt = $this->db->query($sql);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result && $result['total'] ? (float)$result['total'] : 0;
-    }
-
-    /**
-     * Lấy danh sách đơn hàng gần đây (Dashboard)
-     */
-    public function getRecentOrders($limit = 10) {
-        $sql = "SELECT 
-                    dh.ID_DH,
-                    dh.NGAY_GIO_TAO_DON,
-                    dh.SO_TIEN_THANH_TOAN,
-                    dh.TRANG_THAI_THANH_TOAN,
-                    dht.TRANG_THAI_DHHT,
-                    tk.HO_TEN as TEN_KHACH_HANG
+        // Chỉ tính tổng tiền các đơn KHÔNG BỊ HỦY
+        $sql = "SELECT SUM(dh.SO_TIEN_THANH_TOAN) as total 
                 FROM don_hang dh
                 LEFT JOIN don_hang_hien_tai dht ON dh.ID_DH = dht.ID_DH
+                WHERE dht.TRANG_THAI_DHHT != 'Đã hủy'";
+        $stmt = $this->db->query($sql);
+        return $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+    }
+
+    public function getRecentOrders($limit = 5) {
+        $sql = "SELECT dh.*, tk.HO_TEN, dht.TRANG_THAI_DHHT 
+                FROM don_hang dh
                 LEFT JOIN tai_khoan tk ON dh.ID_TK = tk.ID_TK
-                ORDER BY dh.NGAY_GIO_TAO_DON DESC
-                LIMIT :limit";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+                LEFT JOIN don_hang_hien_tai dht ON dh.ID_DH = dht.ID_DH
+                ORDER BY dh.NGAY_GIO_TAO_DON DESC LIMIT " . (int)$limit;
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -265,7 +246,7 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Lấy tất cả đơn hàng (Admin - Có phân trang & filter)
+     * Lấy danh sách đơn hàng (Có phân trang & filter)
      */
     public function getAllOrders($keyword = '', $statusFilter = '', $limit = 20, $offset = 0) {
         $sqlWhere = "WHERE 1=1";
@@ -287,8 +268,9 @@ class OrderModel extends BaseModel {
                     dh.SO_TIEN_THANH_TOAN,
                     dh.TRANG_THAI_THANH_TOAN,
                     dht.TRANG_THAI_DHHT,
-                    tk.HO_TEN as TEN_KHACH_HANG,
-                    tk.SDT_TK
+                    tk.HO_TEN,
+                    tk.SDT_TK,
+                    tk.ID_TK
                 FROM don_hang dh
                 LEFT JOIN don_hang_hien_tai dht ON dh.ID_DH = dht.ID_DH
                 LEFT JOIN tai_khoan tk ON dh.ID_TK = tk.ID_TK
@@ -309,14 +291,20 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Lấy chi tiết 1 đơn hàng (Admin)
+     * =================================================================
+     * PHẦN 2: DÙNG CHO CHI TIẾT ĐƠN HÀNG & CẬP NHẬT
+     * =================================================================
+     */
+
+    /**
+     * Lấy chi tiết thông tin đơn hàng
      */
     public function getOrderById($orderId) {
         $sql = "SELECT 
                     dh.*,
                     dht.TRANG_THAI_DHHT,
                     dht.NGAY_GIO_CAP_NHAT,
-                    tk.HO_TEN as TEN_KHACH_HANG,
+                    tk.HO_TEN,
                     tk.SDT_TK,
                     tk.EMAIL,
                     pttt.TEN_PTTT
@@ -332,20 +320,20 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Lấy chi tiết sản phẩm trong đơn hàng
+     * Lấy danh sách sản phẩm (ĐÃ SỬA: Lấy giá gốc lúc mua + ĐVT)
      */
     public function getOrderItems($orderId) {
         $sql = "SELECT 
                     ctdh.*,
                     hh.TEN_HH,
                     hh.link_anh,
-                    gbht.GIA_HIEN_TAI as DON_GIA,
-                    (ctdh.SO_LUONG_BAN_RA * gbht.GIA_HIEN_TAI) as THANH_TIEN
+                    d.DVT,
+                    ctdh.don_gia_ban as DON_GIA, -- Lấy giá lúc mua trong bảng chi tiết
+                    (ctdh.SO_LUONG_BAN_RA * ctdh.don_gia_ban) as THANH_TIEN
                 FROM chi_tiet_don_hang ctdh
                 LEFT JOIN hang_hoa hh ON ctdh.ID_HH = hh.ID_HH
-                LEFT JOIN gia_ban_hien_tai gbht ON hh.ID_HH = gbht.ID_HH
-                WHERE ctdh.ID_DH = ?
-                ORDER BY hh.TEN_HH";
+                LEFT JOIN dvt d ON hh.ID_DVT = d.ID_DVT -- Join thêm bảng ĐVT
+                WHERE ctdh.ID_DH = ?";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$orderId]);
@@ -353,19 +341,43 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Cập nhật trạng thái đơn hàng (Admin)
+     * Cập nhật trạng thái đơn hàng
      */
-    public function updateOrderStatus($orderId, $newStatus) {
+    // Cập nhật trạng thái đơn hàng (Có tự động cập nhật thanh toán)
+    public function updateOrderStatus($id, $status) {
         try {
-            $sql = "UPDATE don_hang_hien_tai 
-                    SET TRANG_THAI_DHHT = ?, NGAY_GIO_CAP_NHAT = NOW() 
-                    WHERE ID_DH = ?";
+            // Bắt đầu giao dịch để đảm bảo tính toàn vẹn dữ liệu
+            $this->db->beginTransaction();
+
+            // 1. Cập nhật trạng thái xử lý (Bảng don_hang_hien_tai)
+            $check = $this->db->prepare("SELECT ID_DH FROM don_hang_hien_tai WHERE ID_DH = ?");
+            $check->execute([$id]);
             
-            $stmt = $this->db->prepare($sql);
-            return $stmt->execute([$newStatus, $orderId]);
-            
-        } catch (Exception $e) {
-            error_log("OrderModel::updateOrderStatus Error: " . $e->getMessage());
+            if ($check->rowCount() > 0) {
+                $sql = "UPDATE don_hang_hien_tai SET TRANG_THAI_DHHT = ?, NGAY_GIO_CAP_NHAT = NOW() WHERE ID_DH = ?";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([$status, $id]);
+            } else {
+                $sql = "INSERT INTO don_hang_hien_tai (ID_DH, TRANG_THAI_DHHT, NGAY_GIO_CAP_NHAT) VALUES (?, ?, NOW())";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([$id, $status]);
+            }
+
+            // 2. LOGIC MỚI: Nếu giao thành công -> Tự động set Đã thanh toán
+            if ($status === 'Giao hàng thành công') {
+                $sqlPayment = "UPDATE don_hang 
+                               SET TRANG_THAI_THANH_TOAN = 'Đã thanh toán', 
+                                   NGAY_THANH_TOAN = NOW() 
+                               WHERE ID_DH = ?";
+                $stmtPayment = $this->db->prepare($sqlPayment);
+                $stmtPayment->execute([$id]);
+            }
+
+            $this->db->commit();
+            return true;
+
+        } catch (\Exception $e) {
+            $this->db->rollBack();
             return false;
         }
     }

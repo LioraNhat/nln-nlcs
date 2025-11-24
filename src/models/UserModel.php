@@ -71,23 +71,21 @@ class UserModel extends BaseModel {
         }
     }
 
-    // ============================================
-    // 2. CÁC PHƯƠNG THỨC CẬP NHẬT TÀI KHOẢN
-    // ============================================
-
     /**
      * Cập nhật thông tin cá nhân
-     * Lưu ý: Không xử lý Session ở đây nữa (đã chuyển sang Controller)
      */
-    public function updateProfile($userId, $data) {
-        $sql = "UPDATE tai_khoan SET HO_TEN = :ten, SDT_TK = :sdt, GIOI_TINH = :gt, NGAY_GIO_CAP_NHAT = NOW() WHERE ID_TK = :id";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            ':ten' => $data['ho_ten'],
-            ':sdt' => $data['sdt_tk'],
-            ':gt' => $data['gioi_tinh'],
-            ':id' => $userId
-        ]);
+    public function updateProfile($id, $hoTen, $sdt, $gioiTinh) {
+        try {
+            $sql = "UPDATE tai_khoan 
+                    SET HO_TEN = ?, SDT_TK = ?, GIOI_TINH = ?, NGAY_GIO_CAP_NHAT = NOW() 
+                    WHERE ID_TK = ?";
+            
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([$hoTen, $sdt, $gioiTinh, $id]);
+            
+        } catch (\PDOException $e) {
+            return false;
+        }
     }
 
     public function changePassword($userId, $currentPassword, $newPassword) {
@@ -110,6 +108,24 @@ class UserModel extends BaseModel {
             return true;
         }
         return "Lỗi hệ thống, không thể đổi mật khẩu.";
+    }
+
+    /**
+     * Cập nhật mật khẩu mới (HÀM BẠN ĐANG THIẾU)
+     * Hàm này chỉ nhận mật khẩu đã mã hóa và lưu vào DB
+     */
+    public function updatePassword($id, $newPassHash) {
+        try {
+            $sql = "UPDATE tai_khoan 
+                    SET MAT_KHAU = ?, NGAY_GIO_CAP_NHAT = NOW() 
+                    WHERE ID_TK = ?";
+            
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([$newPassHash, $id]);
+            
+        } catch (\PDOException $e) {
+            return false;
+        }
     }
 
     // ============================================
@@ -191,20 +207,16 @@ class UserModel extends BaseModel {
     }
 
     /**
-     * Lấy chi tiết 1 người dùng (Admin)
+     * Lấy thông tin 1 người dùng (Dùng chung cho Admin và Check mật khẩu cũ)
      */
     public function getUserById($userId) {
+        // Query này lấy đủ thông tin cần thiết (bao gồm MAT_KHAU để check)
         $sql = "SELECT 
                     tk.*,
-                    nd.PHAN_QUYEN_TK,
-                    COUNT(DISTINCT dh.ID_DH) as TONG_DON_HANG,
-                    COALESCE(SUM(dh.SO_TIEN_THANH_TOAN), 0) as TONG_CHI_TIEU
+                    nd.PHAN_QUYEN_TK
                 FROM tai_khoan tk
                 INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND
-                LEFT JOIN don_hang dh ON tk.ID_TK = dh.ID_TK
-                WHERE tk.ID_TK = ?
-                GROUP BY tk.ID_TK, tk.HO_TEN, tk.GIOI_TINH, tk.SDT_TK, tk.EMAIL,
-                         tk.NGAY_GIO_TAO_TK, tk.NGAY_GIO_CAP_NHAT, nd.PHAN_QUYEN_TK";
+                WHERE tk.ID_TK = ?";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);

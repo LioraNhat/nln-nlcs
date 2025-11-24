@@ -90,7 +90,7 @@ abstract class BaseController {
 
     /**
      * ===============================
-     * AUTH + REDIRECT FUNCTIONS
+     * AUTH + REDIRECT FUNCTIONS (ĐÃ CHỈNH SỬA CHO KHỚP DB)
      * ===============================
      */
 
@@ -101,21 +101,25 @@ abstract class BaseController {
         }
 
         // Sử dụng BASE_PATH đã define ở index.php
-        $base = defined('BASE_PATH') ? BASE_PATH : '';
+        $base = defined('BASE_PATH') ? BASE_PATH : '/NLN_NLCS/public'; // Fallback an toàn
         header('Location: ' . $base . $path);
         exit;
     }
 
     protected function isLoggedIn() {
-        return isset($_SESSION['user_id']);
+        // Kiểm tra xem mảng 'user' có tồn tại trong session không
+        return isset($_SESSION['user']) && !empty($_SESSION['user']);
     }
 
     /**
-     * SỬA QUAN TRỌNG Ở ĐÂY:
-     * Phải lấy 'user_role_id' (chứa 'AD' hoặc 'KH') để so sánh
+     * Lấy vai trò người dùng
+     * Dựa trên CSDL: ID_ND = 'AD' (Admin) hoặc 'KH' (Khách hàng)
      */
     protected function getRole() {
-        return $_SESSION['user_role_id'] ?? 'guest';
+        if ($this->isLoggedIn() && isset($_SESSION['user']['ID_ND'])) {
+            return $_SESSION['user']['ID_ND'];
+        }
+        return 'guest';
     }
 
     protected function checkAuth() {
@@ -125,10 +129,15 @@ abstract class BaseController {
     }
 
     protected function checkAdmin() {
-        // Kiểm tra đăng nhập VÀ kiểm tra Role ID phải là 'AD'
+        // Kiểm tra: Phải đăng nhập VÀ ID_ND phải là 'AD'
         if (!$this->isLoggedIn() || $this->getRole() !== 'AD') {
-            $_SESSION['error'] = "Bạn không có quyền truy cập!";
-            $this->redirect('/');
+            $_SESSION['error'] = "Bạn không có quyền truy cập trang quản trị!";
+            // Nếu chưa đăng nhập thì về login, nếu là khách thì về trang chủ
+            if (!$this->isLoggedIn()) {
+                $this->redirect('/auth/login');
+            } else {
+                $this->redirect('/');
+            }
         }
     }
 }

@@ -8,6 +8,9 @@ use App\Models\OrderModel;
 use App\Models\ProductModel;
 use App\Models\UserModel;
 use App\Models\CategoryModel;
+use App\Models\PromotionModel;
+use App\Models\InventoryModel;
+use App\Models\SupplierModel;
 
 class AdminController extends BaseController {
 
@@ -15,6 +18,9 @@ class AdminController extends BaseController {
     private $productModel;
     private $userModel;
     private $categoryModel;
+    private $promotionModel;
+    private $inventoryModel;
+    private $supplierModel;
 
     public function __construct() {
         parent::__construct();
@@ -34,6 +40,9 @@ class AdminController extends BaseController {
         $this->productModel = new ProductModel();
         $this->userModel = new UserModel();
         $this->categoryModel = new CategoryModel();
+        $this->promotionModel = new PromotionModel();
+        $this->inventoryModel = new InventoryModel();
+        $this->supplierModel = new SupplierModel();
     }
 
     /**
@@ -65,86 +74,6 @@ class AdminController extends BaseController {
             'success' => $success,
             'error' => $error
         ]);
-    }
-
-    /**
-     * Trang quản lý đơn hàng
-     */
-    public function orders() {
-        $ordersPerPage = 20;
-        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $searchKeyword = $_GET['search'] ?? '';
-        $statusFilter = $_GET['status'] ?? '';
-        $offset = ($currentPage - 1) * $ordersPerPage;
-        
-        $totalOrders = $this->orderModel->countAllOrders($searchKeyword, $statusFilter);
-        $totalPages = ceil($totalOrders / $ordersPerPage);
-        $orders = $this->orderModel->getAllOrders($searchKeyword, $statusFilter, $ordersPerPage, $offset);
-        
-        $success = $_SESSION['success'] ?? null;
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['success'], $_SESSION['error']);
-        
-        $this->renderView('admin/orders/index', [
-            'title' => 'Quản lý đơn hàng',
-            'user' => Auth::user(),
-            'orders' => $orders,
-            'totalPages' => $totalPages,
-            'currentPage' => $currentPage,
-            'searchKeyword' => $searchKeyword,
-            'statusFilter' => $statusFilter,
-            'success' => $success,
-            'error' => $error
-        ]);
-    }
-
-    /**
-     * Xem chi tiết đơn hàng
-     */
-    public function orderDetail($orderId) {
-        $order = $this->orderModel->getOrderById($orderId);
-        
-        if (!$order) {
-            $_SESSION['error'] = 'Không tìm thấy đơn hàng.';
-            $this->redirect('/admin/orders');
-            return;
-        }
-        
-        $orderItems = $this->orderModel->getOrderItems($orderId);
-        
-        $success = $_SESSION['success'] ?? null;
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['success'], $_SESSION['error']);
-        
-        $this->renderView('admin/orders/detail', [
-            'title' => 'Chi tiết đơn hàng #' . $orderId,
-            'user' => Auth::user(),
-            'order' => $order,
-            'orderItems' => $orderItems,
-            'success' => $success,
-            'error' => $error
-        ]);
-    }
-
-    /**
-     * Cập nhật trạng thái đơn hàng
-     */
-    public function updateOrderStatus() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $orderId = $_POST['id_dh'];
-            $newStatus = $_POST['trang_thai_dh'];
-            
-            $success = $this->orderModel->updateOrderStatus($orderId, $newStatus);
-            
-            if ($success) {
-                $_SESSION['success'] = "Đã cập nhật trạng thái đơn hàng $orderId thành công.";
-            } else {
-                $_SESSION['error'] = "Không thể cập nhật trạng thái đơn hàng $orderId.";
-            }
-            
-            // Quay lại trang chi tiết hoặc danh sách
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? '/admin/orders');
-        }
     }
 
     /**
@@ -407,5 +336,446 @@ class AdminController extends BaseController {
             $_SESSION['error'] = "Không thể xóa! Có thể danh mục này đang chứa loại hàng hóa.";
         }
         $this->redirect('/admin/categories');
+    }
+
+    // ======================================================
+    // QUẢN LÝ LOẠI HÀNG HÓA (PRODUCT TYPES / SUB-CATEGORIES)
+    // ======================================================
+
+    public function productTypes() {
+        $productTypes = $this->categoryModel->getAllProductTypesWithCategory();
+        
+        $success = $_SESSION['success'] ?? null;
+        $error = $_SESSION['error'] ?? null;
+        unset($_SESSION['success'], $_SESSION['error']);
+
+        $this->renderView('admin/product-types/index', [
+            'title' => 'Quản lý loại hàng hóa',
+            'user' => Auth::user(),
+            'productTypes' => $productTypes,
+            'success' => $success,
+            'error' => $error
+        ]);
+    }
+
+    // Form thêm mới Loại hàng
+    public function createProductType() {
+        // Cần lấy danh sách Danh mục để chọn trong dropdown
+        $categories = $this->categoryModel->getAllCategories();
+
+        $this->renderView('admin/product-types/form', [
+            'title' => 'Thêm loại hàng mới',
+            'user' => Auth::user(),
+            'isEdit' => false,
+            'categories' => $categories,
+            'productType' => []
+        ]);
+    }
+
+    // Form sửa Loại hàng
+    public function editProductType($id) {
+        $productType = $this->categoryModel->findProductTypeById($id);
+        $categories = $this->categoryModel->getAllCategories();
+
+        if (!$productType) {
+            $_SESSION['error'] = "Không tìm thấy loại hàng!";
+            $this->redirect('/admin/product-types');
+        }
+
+        $this->renderView('admin/product-types/form', [
+            'title' => 'Cập nhật loại hàng',
+            'user' => Auth::user(),
+            'isEdit' => true,
+            'categories' => $categories,
+            'productType' => $productType
+        ]);
+    }
+
+    // Xử lý Lưu (Chung cho Thêm và Sửa)
+    public function storeProductType() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id'] ?? '';
+            $ten_lhh = trim($_POST['ten_lhh']);
+            $id_dm = $_POST['id_dm'];
+
+            if (empty($ten_lhh) || empty($id_dm)) {
+                $_SESSION['error'] = "Vui lòng nhập đầy đủ thông tin!";
+                $this->redirect($_SERVER['HTTP_REFERER']);
+                return;
+            }
+
+            if ($id) {
+                // Cập nhật
+                $result = $this->categoryModel->updateProductType($id, $ten_lhh, $id_dm);
+                $msg = "Cập nhật";
+            } else {
+                // Thêm mới
+                $result = $this->categoryModel->createProductType($ten_lhh, $id_dm);
+                $msg = "Thêm mới";
+            }
+
+            if ($result) {
+                $_SESSION['success'] = "$msg loại hàng thành công!";
+            } else {
+                $_SESSION['error'] = "Có lỗi xảy ra!";
+            }
+
+            $this->redirect('/admin/product-types');
+        }
+    }
+
+    // Xóa Loại hàng
+    public function deleteProductType($id) {
+        $result = $this->categoryModel->deleteProductType($id);
+        if ($result) {
+            $_SESSION['success'] = "Đã xóa loại hàng thành công!";
+        } else {
+            $_SESSION['error'] = "Không thể xóa! Loại hàng này đang chứa sản phẩm.";
+        }
+        $this->redirect('/admin/product-types');
+    }
+
+    // ======================================================
+    // QUẢN LÝ KHUYẾN MÃI (PROMOTIONS)
+    // ======================================================
+
+    public function promotions() {
+        $promotions = $this->promotionModel->getAllPromotions();
+        
+        // Cập nhật trạng thái tự động dựa trên ngày hiện tại (Optional)
+        // Code này giúp khi vào trang danh sách, trạng thái tự chuẩn lại
+        $today = date('Y-m-d H:i:s');
+        foreach ($promotions as $km) {
+            $status = $km['TRANG_THAI_KM'];
+            // Nếu đã hủy thì bỏ qua, chỉ cập nhật cái đang chạy
+            if ($status !== 'Đã hủy') {
+                $newStatus = $status;
+                if ($today < $km['NGAY_BD_KM']) $newStatus = 'Sắp diễn ra';
+                elseif ($today >= $km['NGAY_BD_KM'] && $today <= $km['NGAY_KT_KM']) $newStatus = 'Đang diễn ra';
+                elseif ($today > $km['NGAY_KT_KM']) $newStatus = 'Đã kết thúc';
+                
+                if ($newStatus !== $status) {
+                    // Gọi model cập nhật lại status (nếu cần thiết, hoặc chỉ hiển thị)
+                    // Ở đây tôi cập nhật vào mảng hiển thị cho đúng thực tế
+                    $km['TRANG_THAI_KM'] = $newStatus;
+                    // Nếu muốn lưu vào DB luôn thì gọi hàm updateStatus ở Model
+                }
+            }
+        }
+
+        $this->renderView('admin/promotions/index', [
+            'title' => 'Quản lý khuyến mãi',
+            'user' => Auth::user(),
+            'promotions' => $promotions,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    public function createPromotion() {
+        $this->renderView('admin/promotions/form', [
+            'title' => 'Thêm khuyến mãi',
+            'user' => Auth::user(),
+            'isEdit' => false,
+            'promotion' => []
+        ]);
+    }
+
+    public function editPromotion($id) {
+        $promotion = $this->promotionModel->getPromotionById($id);
+        if (!$promotion) {
+            $_SESSION['error'] = "Không tìm thấy khuyến mãi!";
+            $this->redirect('/admin/promotions');
+        }
+        $this->renderView('admin/promotions/form', [
+            'title' => 'Cập nhật khuyến mãi',
+            'user' => Auth::user(),
+            'isEdit' => true,
+            'promotion' => $promotion
+        ]);
+    }
+
+    public function storePromotion() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id'] ?? '';
+            
+            // Tự động tính trạng thái dựa trên ngày
+            $start = $_POST['ngay_bd'];
+            $end = $_POST['ngay_kt'];
+            $today = date('Y-m-d H:i:s');
+            
+            $status = 'Sắp diễn ra';
+            if ($today >= $start && $today <= $end) $status = 'Đang diễn ra';
+            if ($today > $end) $status = 'Đã kết thúc';
+            
+            // Nếu người dùng chọn "Đã hủy" thủ công thì ưu tiên
+            if (isset($_POST['trang_thai']) && $_POST['trang_thai'] === 'Đã hủy') {
+                $status = 'Đã hủy';
+            }
+
+            $data = [
+                'ten_km' => $_POST['ten_km'],
+                'phan_tram_km' => $_POST['phan_tram_km'],
+                'ngay_bd' => $start,
+                'ngay_kt' => $end,
+                'trang_thai' => $status
+            ];
+
+            if ($id) {
+                $result = $this->promotionModel->updatePromotion($id, $data);
+                $msg = "Cập nhật";
+            } else {
+                $result = $this->promotionModel->createPromotion($data);
+                $msg = "Thêm mới";
+            }
+
+            if ($result) {
+                $_SESSION['success'] = "$msg chương trình khuyến mãi thành công!";
+            } else {
+                $_SESSION['error'] = "Có lỗi xảy ra!";
+            }
+            $this->redirect('/admin/promotions');
+        }
+    }
+
+    public function deletePromotion($id) {
+        $result = $this->promotionModel->deletePromotion($id);
+        if ($result) {
+            $_SESSION['success'] = "Đã xóa khuyến mãi thành công!";
+        } else {
+            $_SESSION['error'] = "Không thể xóa! Có thể đang có sản phẩm áp dụng mã này.";
+        }
+        $this->redirect('/admin/promotions');
+    }
+
+    // ======================================================
+    // QUẢN LÝ TỒN KHO (INVENTORY / IMPORT SLIPS)
+    // ======================================================
+
+    public function inventories() {
+        $slips = $this->inventoryModel->getAllImportSlips();
+        
+        $this->renderView('admin/inventories/index', [
+            'title' => 'Quản lý phiếu nhập kho',
+            'user' => Auth::user(),
+            'slips' => $slips,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    public function inventoryDetail($id) {
+        $slip = $this->inventoryModel->getImportSlipById($id);
+        if (!$slip) {
+            $_SESSION['error'] = "Không tìm thấy phiếu nhập!";
+            $this->redirect('/admin/inventories');
+        }
+        $details = $this->inventoryModel->getImportSlipDetails($id);
+
+        $this->renderView('admin/inventories/detail', [
+            'title' => 'Chi tiết phiếu nhập ' . $id,
+            'user' => Auth::user(),
+            'slip' => $slip,
+            'details' => $details
+        ]);
+    }
+
+    public function createInventory() {
+        $suppliers = $this->inventoryModel->getAllSuppliers();
+        $products = $this->inventoryModel->getAllProducts();
+
+        $this->renderView('admin/inventories/form', [
+            'title' => 'Tạo phiếu nhập kho',
+            'user' => Auth::user(),
+            'suppliers' => $suppliers,
+            'products' => $products
+        ]);
+    }
+
+    public function storeInventory() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Lấy dữ liệu chung
+            $data = [
+                'id_ncc' => $_POST['id_ncc'],
+                'ngay_lap' => $_POST['ngay_lap'] ?? date('Y-m-d H:i:s'),
+                'chung_tu' => $_POST['chung_tu'] ?? '',
+                'tong_tien' => 0
+            ];
+
+            // Xử lý chi tiết sản phẩm (Mảng từ form)
+            $details = [];
+            $product_ids = $_POST['product_id'] ?? [];
+            $quantities = $_POST['quantity'] ?? [];
+            $prices = $_POST['price'] ?? [];
+            $totalAmount = 0;
+
+            for ($i = 0; $i < count($product_ids); $i++) {
+                if (!empty($product_ids[$i]) && $quantities[$i] > 0) {
+                    $rowTotal = $quantities[$i] * $prices[$i];
+                    $totalAmount += $rowTotal;
+                    
+                    $details[] = [
+                        'id_hh' => $product_ids[$i],
+                        'so_luong' => $quantities[$i],
+                        'don_gia' => $prices[$i]
+                    ];
+                }
+            }
+            $data['tong_tien'] = $totalAmount;
+
+            if (empty($details)) {
+                $_SESSION['error'] = "Vui lòng chọn ít nhất một sản phẩm để nhập!";
+                $this->redirect('/admin/inventories/create');
+                return;
+            }
+
+            $result = $this->inventoryModel->createImportSlip($data, $details);
+
+            if ($result) {
+                $_SESSION['success'] = "Đã nhập kho thành công!";
+                $this->redirect('/admin/inventories');
+            } else {
+                $_SESSION['error'] = "Lỗi khi lưu phiếu nhập!";
+                $this->redirect('/admin/inventories/create');
+            }
+        }
+    }
+
+    // ======================================================
+    // QUẢN LÝ NHÀ CUNG CẤP (SUPPLIERS)
+    // ======================================================
+
+    public function suppliers() {
+        $suppliers = $this->supplierModel->getAllSuppliers();
+        
+        $this->renderView('admin/suppliers/index', [
+            'title' => 'Quản lý Nhà cung cấp',
+            'user' => Auth::user(),
+            'suppliers' => $suppliers,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    public function createSupplier() {
+        $this->renderView('admin/suppliers/form', [
+            'title' => 'Thêm Nhà cung cấp',
+            'user' => Auth::user(),
+            'isEdit' => false,
+            'supplier' => []
+        ]);
+    }
+
+    public function editSupplier($id) {
+        $supplier = $this->supplierModel->getSupplierById($id);
+        if (!$supplier) {
+            $_SESSION['error'] = "Không tìm thấy nhà cung cấp!";
+            $this->redirect('/admin/suppliers');
+        }
+        $this->renderView('admin/suppliers/form', [
+            'title' => 'Cập nhật Nhà cung cấp',
+            'user' => Auth::user(),
+            'isEdit' => true,
+            'supplier' => $supplier
+        ]);
+    }
+
+    public function storeSupplier() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id'] ?? '';
+            
+            $data = [
+                'ten_ncc' => $_POST['ten_ncc'],
+                'dia_chi' => $_POST['dia_chi'],
+                'sdt' => $_POST['sdt'],
+                'email' => $_POST['email']
+            ];
+
+            if ($id) {
+                $result = $this->supplierModel->updateSupplier($id, $data);
+                $msg = "Cập nhật";
+            } else {
+                $result = $this->supplierModel->createSupplier($data);
+                $msg = "Thêm mới";
+            }
+
+            if ($result) {
+                $_SESSION['success'] = "$msg nhà cung cấp thành công!";
+            } else {
+                $_SESSION['error'] = "Có lỗi xảy ra!";
+            }
+            $this->redirect('/admin/suppliers');
+        }
+    }
+
+    public function deleteSupplier($id) {
+        $result = $this->supplierModel->deleteSupplier($id);
+        if ($result) {
+            $_SESSION['success'] = "Đã xóa nhà cung cấp thành công!";
+        } else {
+            $_SESSION['error'] = "Không thể xóa! Nhà cung cấp này đã có lịch sử nhập hàng.";
+        }
+        $this->redirect('/admin/suppliers');
+    }
+
+    // ======================================================
+    // QUẢN LÝ ĐƠN HÀNG (ORDERS)
+    // ======================================================
+
+    public function orders() {
+        // Lấy danh sách đơn hàng
+        $orders = $this->orderModel->getAllOrders();
+
+        $this->renderView('admin/orders/index', [
+            'title' => 'Quản lý Đơn hàng',
+            'user' => Auth::user(),
+            'orders' => $orders,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    public function orderDetail($id) {
+        // Lấy thông tin đơn hàng
+        $order = $this->orderModel->getOrderById($id);
+        
+        if (!$order) {
+            $_SESSION['error'] = "Không tìm thấy đơn hàng!";
+            $this->redirect('/admin/orders');
+        }
+
+        // Lấy danh sách sản phẩm trong đơn
+        $items = $this->orderModel->getOrderItems($id);
+
+        $this->renderView('admin/orders/detail', [
+            'title' => 'Chi tiết đơn hàng #' . $id,
+            'user' => Auth::user(),
+            'order' => $order,
+            'items' => $items,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    // Xử lý cập nhật trạng thái (POST)
+    public function updateOrderStatus() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id_dh'];
+            $status = $_POST['trang_thai'];
+
+            if ($this->orderModel->updateOrderStatus($id, $status)) {
+                $_SESSION['success'] = "Đã cập nhật trạng thái đơn hàng #$id thành công!";
+            } else {
+                $_SESSION['error'] = "Lỗi cập nhật trạng thái!";
+            }
+
+            // Quay lại trang chi tiết
+            $this->redirect("/admin/order-detail/$id");
+        }
     }
 }
