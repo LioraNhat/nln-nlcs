@@ -7,9 +7,22 @@ use PDO;
 
 class SupplierModel extends BaseModel {
 
-    // Lấy tất cả nhà cung cấp
-    public function getAllSuppliers() {
-        $stmt = $this->db->query("SELECT * FROM nha_cung_cap ORDER BY ID_NCC ASC");
+    // Lấy tất cả nhà cung cấp (Có tìm kiếm)
+    public function getAllSuppliers($search = '') {
+        $sql = "SELECT * FROM nha_cung_cap";
+        $params = [];
+
+        if (!empty($search)) {
+            $sql .= " WHERE TEN_NCC LIKE ? OR EMAIL_NCC LIKE ? OR SDT_NCC LIKE ? OR ID_NCC LIKE ?";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $sql .= " ORDER BY ID_NCC ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

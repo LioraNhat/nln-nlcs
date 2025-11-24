@@ -8,10 +8,22 @@ use PDO;
 class CategoryModel extends BaseModel {
 
     /**
-     * Lấy tất cả danh mục (Categories)
+     * Lấy danh sách danh mục (Có tìm kiếm)
      */
-    public function getAllCategories() {
-        $stmt = $this->db->query("SELECT * FROM danh_muc ORDER BY ID_DM ASC");
+    public function getAllCategories($search = '') {
+        $sql = "SELECT * FROM danh_muc";
+        $params = [];
+        
+        if (!empty($search)) {
+            $sql .= " WHERE TEN_DM LIKE ? OR ID_DM LIKE ?";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+        
+        $sql .= " ORDER BY ID_DM ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -242,14 +254,25 @@ class CategoryModel extends BaseModel {
     // ======================================================
 
     /**
-     * Lấy tất cả loại hàng kèm tên danh mục cha
+     * Lấy danh sách loại hàng hóa (Có tìm kiếm)
      */
-    public function getAllProductTypesWithCategory() {
+    public function getAllProductTypesWithCategory($search = '') {
         $sql = "SELECT lhh.ID_LHH, lhh.TEN_LHH, dm.TEN_DM 
                 FROM loai_hang_hoa lhh
-                LEFT JOIN danh_muc dm ON lhh.ID_DM = dm.ID_DM
-                ORDER BY lhh.ID_LHH ASC";
-        $stmt = $this->db->query($sql);
+                LEFT JOIN danh_muc dm ON lhh.ID_DM = dm.ID_DM";
+        
+        $params = [];
+        if (!empty($search)) {
+            $sql .= " WHERE lhh.TEN_LHH LIKE ? OR lhh.ID_LHH LIKE ? OR dm.TEN_DM LIKE ?";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+        
+        $sql .= " ORDER BY lhh.ID_LHH ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

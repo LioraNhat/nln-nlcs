@@ -7,9 +7,20 @@ use PDO;
 
 class PromotionModel extends BaseModel {
 
-    // Lấy tất cả khuyến mãi
-    public function getAllPromotions() {
-        $stmt = $this->db->query("SELECT * FROM khuyen_mai ORDER BY ID_KM DESC");
+    // Lấy tất cả khuyến mãi (Có tìm kiếm)
+    public function getAllPromotions($search = '') {
+        $sql = "SELECT * FROM khuyen_mai";
+        $params = [];
+
+        if (!empty($search)) {
+            $sql .= " WHERE TEN_KM LIKE ? OR ID_KM LIKE ?";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $sql .= " ORDER BY ID_KM DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

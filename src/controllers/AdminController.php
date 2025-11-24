@@ -296,10 +296,9 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function categories() {
-        // Bỏ chú thích dòng khai báo model trong __construct nếu chưa làm
-        // $this->categoryModel = new CategoryModel(); 
+        $search = $_GET['search'] ?? '';
         
-        $categories = $this->categoryModel->getAllCategories();
+        $categories = $this->categoryModel->getAllCategories($search);
         
         $success = $_SESSION['success'] ?? null;
         $error = $_SESSION['error'] ?? null;
@@ -309,6 +308,7 @@ class AdminController extends BaseController {
             'title' => 'Quản lý danh mục',
             'user' => Auth::user(),
             'categories' => $categories,
+            'searchKeyword' => $search,
             'success' => $success,
             'error' => $error
         ]);
@@ -388,7 +388,8 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function productTypes() {
-        $productTypes = $this->categoryModel->getAllProductTypesWithCategory();
+        $search = $_GET['search'] ?? ''; // 1. Lấy từ khóa
+        $productTypes = $this->categoryModel->getAllProductTypesWithCategory($search);
         
         $success = $_SESSION['success'] ?? null;
         $error = $_SESSION['error'] ?? null;
@@ -398,6 +399,7 @@ class AdminController extends BaseController {
             'title' => 'Quản lý loại hàng hóa',
             'user' => Auth::user(),
             'productTypes' => $productTypes,
+            'searchKeyword' => $search,
             'success' => $success,
             'error' => $error
         ]);
@@ -485,10 +487,10 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function promotions() {
-        $promotions = $this->promotionModel->getAllPromotions();
+        $search = $_GET['search'] ?? '';
+
+        $promotions = $this->promotionModel->getAllPromotions($search);
         
-        // Cập nhật trạng thái tự động dựa trên ngày hiện tại (Optional)
-        // Code này giúp khi vào trang danh sách, trạng thái tự chuẩn lại
         $today = date('Y-m-d H:i:s');
         foreach ($promotions as $km) {
             $status = $km['TRANG_THAI_KM'];
@@ -512,6 +514,7 @@ class AdminController extends BaseController {
             'title' => 'Quản lý khuyến mãi',
             'user' => Auth::user(),
             'promotions' => $promotions,
+            'searchKeyword' => $search,
             'success' => $_SESSION['success'] ?? null,
             'error' => $_SESSION['error'] ?? null
         ]);
@@ -599,12 +602,14 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function inventories() {
-        $slips = $this->inventoryModel->getAllImportSlips();
+        $search = $_GET['search'] ?? '';
+        $slips = $this->inventoryModel->getAllImportSlips($search);
         
         $this->renderView('admin/inventories/index', [
             'title' => 'Quản lý phiếu nhập kho',
             'user' => Auth::user(),
             'slips' => $slips,
+            'searchKeyword' => $search,
             'success' => $_SESSION['success'] ?? null,
             'error' => $_SESSION['error'] ?? null
         ]);
@@ -693,12 +698,14 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function suppliers() {
-        $suppliers = $this->supplierModel->getAllSuppliers();
+        $search = $_GET['search'] ?? '';
+        $suppliers = $this->supplierModel->getAllSuppliers($search);
         
         $this->renderView('admin/suppliers/index', [
             'title' => 'Quản lý Nhà cung cấp',
             'user' => Auth::user(),
             'suppliers' => $suppliers,
+            'searchKeyword' => $search,
             'success' => $_SESSION['success'] ?? null,
             'error' => $_SESSION['error'] ?? null
         ]);

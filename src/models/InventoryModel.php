@@ -7,13 +7,25 @@ use PDO;
 
 class InventoryModel extends BaseModel {
 
-    // Lấy danh sách phiếu nhập kho
-    public function getAllImportSlips() {
+    // Lấy danh sách phiếu nhập kho (Có tìm kiếm)
+    public function getAllImportSlips($search = '') {
         $sql = "SELECT pn.*, ncc.TEN_NCC 
                 FROM phieu_nhap pn 
-                LEFT JOIN nha_cung_cap ncc ON pn.ID_NCC = ncc.ID_NCC 
-                ORDER BY pn.NGAY_LAP_PHIEU_NHAP DESC";
-        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+                LEFT JOIN nha_cung_cap ncc ON pn.ID_NCC = ncc.ID_NCC";
+        
+        $params = [];
+        if (!empty($search)) {
+            $sql .= " WHERE pn.ID_PN LIKE ? OR ncc.TEN_NCC LIKE ? OR pn.CHUNG_TU_GOC LIKE ?";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $sql .= " ORDER BY pn.NGAY_LAP_PHIEU_NHAP DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Lấy chi tiết 1 phiếu nhập

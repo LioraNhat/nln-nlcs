@@ -18,6 +18,19 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                     </div>
                 </div>
             </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form action="" method="GET">
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control" placeholder="Nhập từ khóa tìm kiếm..." value="<?= isset($searchKeyword) ? htmlspecialchars($searchKeyword) : '' ?>">
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Tìm kiếm</button>
+                            <?php if(isset($searchKeyword) && $searchKeyword != ''): ?>
+                                <a href="?" class="btn btn-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
