@@ -168,6 +168,7 @@ class UserModel extends BaseModel {
         $sql = "SELECT 
                     tk.ID_TK,
                     tk.HO_TEN,
+                    tk.DIA_CHI_AVT,
                     tk.GIOI_TINH,
                     tk.SDT_TK,
                     tk.EMAIL,
@@ -259,20 +260,6 @@ class UserModel extends BaseModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Cập nhật quyền người dùng (Admin)
-     */
-    public function updateUserRole($userId, $roleId) {
-        $sql = "UPDATE tai_khoan SET ID_ND = ? WHERE ID_TK = ?";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([$roleId, $userId]);
-    }
-
-    /**
-     * Khóa/Mở khóa tài khoản (Nếu có trường TRANG_THAI trong DB)
-     * Lưu ý: Bảng tai_khoan hiện tại chưa có trường này
-     * Nếu cần, thêm cột: ALTER TABLE tai_khoan ADD COLUMN TRANG_THAI ENUM('Hoạt động', 'Khóa') DEFAULT 'Hoạt động'
-     */
     public function toggleUserStatus($userId, $status) {
         // Giả sử bạn thêm cột TRANG_THAI vào bảng tai_khoan
         $sql = "UPDATE tai_khoan SET TRANG_THAI = ? WHERE ID_TK = ?";
@@ -308,6 +295,87 @@ class UserModel extends BaseModel {
         }
     }
 
+    /**
+     * Hàm cập nhật thông tin User dành cho Admin (Bao gồm cả Email và Mật khẩu)
+     */
+    public function adminUpdateCustomer($id, $data) {
+        try {
+            if (!empty($data['mat_khau'])) {
+                $sql = "UPDATE tai_khoan SET HO_TEN=?, SDT_TK=?, GIOI_TINH=?, EMAIL=?, MAT_KHAU=?, NGAY_GIO_CAP_NHAT=NOW() WHERE ID_TK=?";
+                $stmt = $this->db->prepare($sql);
+                return $stmt->execute([$data['ho_ten'], $data['sdt'], $data['gioi_tinh'], $data['email'], $data['mat_khau'], $id]);
+            } else {
+                $sql = "UPDATE tai_khoan SET HO_TEN=?, SDT_TK=?, GIOI_TINH=?, EMAIL=?, NGAY_GIO_CAP_NHAT=NOW() WHERE ID_TK=?";
+                $stmt = $this->db->prepare($sql);
+                return $stmt->execute([$data['ho_ten'], $data['sdt'], $data['gioi_tinh'], $data['email'], $id]);
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    // ... (Các hàm cũ giữ nguyên) ...
+
+    /**
+     * HÀM MỚI: Lấy danh sách theo vai trò (Để tách KH và AD)
+     * $roleId: 'KH' hoặc 'AD'
+     */
+    public function getUsersByRole($roleId, $search = '', $limit = 100, $offset = 0) {
+        $sql = "SELECT tk.*, nd.PHAN_QUYEN_TK 
+                FROM tai_khoan tk
+                INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND
+                WHERE tk.ID_ND = ?";
+        
+        $params = [$roleId];
+
+        if (!empty($search)) {
+            $sql .= " AND (tk.HO_TEN LIKE ? OR tk.EMAIL LIKE ? OR tk.SDT_TK LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $sql .= " ORDER BY tk.NGAY_GIO_TAO_TK DESC LIMIT $limit OFFSET $offset";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * HÀM MỚI: Đếm số lượng theo vai trò (Để phân trang)
+     */
+    public function countUsersByRole($roleId, $search = '') {
+        $sql = "SELECT COUNT(*) as total FROM tai_khoan WHERE ID_ND = ?";
+        $params = [$roleId];
+
+        if (!empty($search)) {
+            $sql .= " AND (HO_TEN LIKE ? OR EMAIL LIKE ? OR SDT_TK LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    }
+
+    /**
+     * HÀM MỚI: Cập nhật phân quyền (Đổi từ KH -> AD hoặc ngược lại)
+     */
+    public function updateRole($userId, $newRoleId) {
+        try {
+            // $newRoleId sẽ là 'AD' hoặc 'KH'
+            $sql = "UPDATE tai_khoan SET ID_ND = ? WHERE ID_TK = ?";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([$newRoleId, $userId]);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    // THỐNG KÊ ADMIN
     /**
      * Thống kê người dùng mới theo tháng (Dashboard)
      */

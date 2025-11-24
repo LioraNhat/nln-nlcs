@@ -84,6 +84,13 @@ function menuActive($uri, $keyword) {
                 </li>
 
                 <li class="nav-item">
+                    <a href="<?php echo BASE_PATH; ?>/admin/statistics" class="nav-link <?php echo menuActive($currentUri, '/admin/users'); ?>">
+                        <i class="nav-icon bi bi-people"></i>
+                        <p>Thống kê</p>
+                    </a>
+                </li>
+
+                <li class="nav-item">
                     <a href="<?php echo BASE_PATH; ?>/admin/settings" class="nav-link <?php echo menuActive($currentUri, '/admin/settings'); ?>">
                         <i class="nav-icon bi bi-gear"></i>
                         <p>Cài đặt</p>

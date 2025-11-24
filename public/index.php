@@ -92,8 +92,12 @@ $router->add('GET', 'admin/orders', 'AdminController@orders');
 $router->add('GET', 'admin/order-detail/{id}', 'AdminController@orderDetail');
 $router->add('POST', 'admin/order-update-status', 'AdminController@updateOrderStatus');
 
-// --- Quản lý Người dùng ---
+// --- Quản lý Khách hàng (Users) ---
 $router->add('GET', 'admin/users', 'AdminController@users');
+$router->add('GET', 'admin/users/edit/{id}', 'AdminController@editUser');
+$router->add('POST', 'admin/users/update', 'AdminController@updateUser');
+$router->add('GET', 'admin/users/delete/{id}', 'AdminController@deleteUser');
+$router->add('POST', 'admin/users/update-role', 'AdminController@updateUserRole');
 
 // KHỞI CHẠY
 $router->run();

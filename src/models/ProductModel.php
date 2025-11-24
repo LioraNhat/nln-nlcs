@@ -236,33 +236,31 @@ class ProductModel extends BaseModel {
         return str_pad($newId, 5, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Lấy ID Thời điểm hiện tại (Để lưu giá)
-     */
-    private function getCurrentTimeId() {
-        $sql = "SELECT ID_TD FROM thoi_diem WHERE NOW() BETWEEN NGAY_BD_GIA_BAN AND NGAY_KT_GIA_BAN LIMIT 1";
-        $stmt = $this->db->query($sql);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ? $row['ID_TD'] : 'TD003'; // Mặc định TD003 nếu không tìm thấy
-    }
-
-    /**
-     * Thêm sản phẩm mới (Xử lý 2 bảng: hang_hoa & gia_ban_hien_tai)
-     */
     public function createProduct($data) {
         try {
             $this->db->beginTransaction();
 
-            $newId = $this->generateNewId();
-            $idTD = $this->getCurrentTimeId();
+            // 1. Lấy ID từ Controller gửi sang (Đã đồng bộ với tên ảnh)
+            // KHÔNG tự sinh ID ở đây nữa
+            $idHH = $data['id_hh']; 
 
-            // 1. Insert vào bảng HANG_HOA
+            // 2. Lấy ID Thời điểm hiện tại (TD003...)
+            $idTD = $this->getCurrentTimeId(); 
+            
+            // Nếu không tìm thấy thời điểm giá phù hợp, báo lỗi hoặc dùng mặc định
+            if (!$idTD) {
+                // Tùy chọn: throw new Exception("Chưa thiết lập Thời điểm giá cho ngày hôm nay!");
+                // Hoặc gán cứng nếu muốn test:
+                $idTD = 'TD003'; 
+            }
+
+            // 3. Insert vào bảng HANG_HOA
             $sqlHH = "INSERT INTO hang_hoa (ID_HH, ID_LHH, ID_DVT, ID_KM, TEN_HH, link_anh, MO_TA_HH, SO_LUONG_TON_HH, DUOC_PHEP_BAN, LA_HANG_SX, HSD) 
                       VALUES (:id, :lhh, :dvt, :km, :ten, :anh, :mota, :sl, :ban, :hsx, :hsd)";
             
             $stmtHH = $this->db->prepare($sqlHH);
             $stmtHH->execute([
-                ':id' => $newId,
+                ':id' => $idHH, // Dùng biến $idHH
                 ':lhh' => $data['id_lhh'],
                 ':dvt' => $data['id_dvt'],
                 ':km' => !empty($data['id_km']) ? $data['id_km'] : NULL,
@@ -275,12 +273,12 @@ class ProductModel extends BaseModel {
                 ':hsd' => $data['hsd']
             ]);
 
-            // 2. Insert vào bảng GIA_BAN_HIEN_TAI
+            // 4. Insert vào bảng GIA_BAN_HIEN_TAI
             if (!empty($data['gia_ban'])) {
                 $sqlGia = "INSERT INTO gia_ban_hien_tai (ID_HH, ID_TD, GIA_HIEN_TAI) VALUES (:id, :td, :gia)";
                 $stmtGia = $this->db->prepare($sqlGia);
                 $stmtGia->execute([
-                    ':id' => $newId,
+                    ':id' => $idHH,
                     ':td' => $idTD,
                     ':gia' => $data['gia_ban']
                 ]);
@@ -291,9 +289,26 @@ class ProductModel extends BaseModel {
 
         } catch (\Exception $e) {
             $this->db->rollBack();
-            // Log lỗi nếu cần: error_log($e->getMessage());
+            // error_log($e->getMessage()); // Nên bật log để debug
             return false;
         }
+    }
+
+    /**
+     * Lấy ID Thời điểm hiện tại (Để lưu giá)
+     */
+    private function getCurrentTimeId() {
+        // Lấy giờ hiện tại của server PHP (Chính xác theo múi giờ bạn cài đặt)
+        $today = date('Y-m-d H:i:s'); 
+        
+        $sql = "SELECT ID_TD FROM thoi_diem WHERE ? BETWEEN NGAY_BD_GIA_BAN AND NGAY_KT_GIA_BAN LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$today]);
+        
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Trả về ID tìm thấy, hoặc mặc định TD003
+        return $row ? $row['ID_TD'] : 'TD003'; 
     }
 
     /**
@@ -490,5 +505,25 @@ class ProductModel extends BaseModel {
     public function getAllKhuyenMai() {
         // Chỉ lấy khuyến mãi đang diễn ra hoặc sắp diễn ra
         return $this->db->query("SELECT * FROM khuyen_mai WHERE TRANG_THAI_KM != 'Đã hủy' ORDER BY TEN_KM ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hàm sinh mã tự động (VD: 00001, 00002...)
+     * Dùng để đặt tên ảnh trước khi lưu DB
+     */
+    public function generateProductId() {
+        $stmt = $this->db->query("SELECT MAX(ID_HH) as max_id FROM hang_hoa");
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $maxId = $row['max_id'];
+
+        if ($maxId) {
+            // Tăng lên 1 đơn vị (VD: "00005" -> 6)
+            $num = intval($maxId) + 1;
+        } else {
+            $num = 1;
+        }
+
+        // Format thành chuỗi 5 ký tự (VD: 00006)
+        return str_pad($num, 5, '0', STR_PAD_LEFT);
     }
 }

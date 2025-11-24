@@ -105,33 +105,63 @@ class AdminController extends BaseController {
         ]);
     }
 
-    /**
-     * Trang quản lý người dùng
-     */
+    // ======================================================
+    // QUẢN LÝ NGƯỜI DÙNG (CHỈNH SỬA)
+    // ======================================================
+
     public function users() {
-        $usersPerPage = 20;
-        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $searchKeyword = $_GET['search'] ?? '';
-        $offset = ($currentPage - 1) * $usersPerPage;
+        $search = $_GET['search'] ?? '';
         
-        $totalUsers = $this->userModel->countAllUsers($searchKeyword);
-        $totalPages = ceil($totalUsers / $usersPerPage);
-        $users = $this->userModel->getAllUsers($searchKeyword, $usersPerPage, $offset);
-        
-        $success = $_SESSION['success'] ?? null;
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['success'], $_SESSION['error']);
-        
+        // --- PHẦN 1: KHÁCH HÀNG (Phân trang như cũ) ---
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = 10; // Giảm xuống 10 để giao diện đỡ dài
+        $offset = ($page - 1) * $limit;
+
+        // Gọi hàm mới getUsersByRole với tham số 'KH'
+        $customers = $this->userModel->getUsersByRole('KH', $search, $limit, $offset);
+        $totalCustomers = $this->userModel->countUsersByRole('KH', $search);
+        $totalPages = ceil($totalCustomers / $limit);
+
+        // --- PHẦN 2: QUẢN TRỊ VIÊN (Lấy hết hoặc limit nhiều hơn) ---
+        // Gọi hàm mới getUsersByRole với tham số 'AD'
+        $admins = $this->userModel->getUsersByRole('AD', $search, 50, 0);
+
         $this->renderView('admin/users/index', [
-            'title' => 'Quản lý người dùng',
+            'title' => 'Quản lý Người dùng',
             'user' => Auth::user(),
-            'users' => $users,
+            'customers' => $customers, // Danh sách khách
+            'admins' => $admins,       // Danh sách admin
             'totalPages' => $totalPages,
-            'currentPage' => $currentPage,
-            'searchKeyword' => $searchKeyword,
-            'success' => $success,
-            'error' => $error
+            'currentPage' => $page,
+            'searchKeyword' => $search,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
         ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    /**
+     * HÀM MỚI: Xử lý đổi quyền (POST)
+     */
+    public function updateUserRole() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['user_id'];
+            $role = $_POST['role_id']; // 'AD' hoặc 'KH'
+
+            // Không cho phép tự hạ quyền chính mình để tránh mất quyền Admin
+            if ($id == $_SESSION['user']['ID_TK']) {
+                $_SESSION['error'] = "Bạn không thể tự thay đổi quyền của chính mình!";
+                $this->redirect('/admin/users');
+                return;
+            }
+
+            if ($this->userModel->updateRole($id, $role)) {
+                $_SESSION['success'] = "Đã thay đổi phân quyền thành công!";
+            } else {
+                $_SESSION['error'] = "Lỗi cập nhật quyền!";
+            }
+            $this->redirect('/admin/users');
+        }
     }
 
     /**
@@ -190,15 +220,40 @@ class AdminController extends BaseController {
         ]);
     }
 
-    /**
-     * Xử lý Lưu dữ liệu (Dùng chung cho cả Thêm và Sửa)
-     */
+    // Thêm ảnh và mã ảnh là id
     public function storeProduct() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'] ?? ''; // Nếu có ID là sửa, không có là thêm
-            
-            // Lấy dữ liệu từ form
+            // 1. Xác định ID (Mã sản phẩm)
+            $id = $_POST['id'] ?? '';
+            $isUpdate = !empty($id); // Biến cờ để biết đang sửa hay thêm
+
+            if (!$isUpdate) {
+                // Nếu là Thêm mới: Tự sinh ID ngay tại đây để dùng đặt tên ảnh
+                $id = $this->productModel->generateProductId();
+            }
+
+            // 2. Xử lý Ảnh
+            // Mặc định lấy ảnh cũ (nếu đang sửa) hoặc rỗng
+            $link_anh = $_POST['old_img'] ?? ''; 
+
+            if (isset($_FILES['img']) && $_FILES['img']['error'] == 0) {
+                $targetDir = __DIR__ . '/../../public/uploads/';
+                
+                // QUAN TRỌNG: Đặt tên ảnh = Mã sản phẩm + .png
+                $fileName = $id . '.png';
+                $targetFile = $targetDir . $fileName;
+                
+                // Di chuyển file upload vào thư mục
+                // Lưu ý: Hàm này chỉ đổi tên đuôi file, không convert định dạng ảnh.
+                // (Trình duyệt vẫn hiển thị được dù file gốc là jpg nhưng tên là png)
+                if (move_uploaded_file($_FILES['img']['tmp_name'], $targetFile)) {
+                    $link_anh = $fileName;
+                }
+            }
+
+            // 3. Gom dữ liệu để lưu
             $data = [
+                'id_hh' => $id, // Truyền ID vào (Quan trọng cho hàm create)
                 'ten_hh' => $_POST['ten_hh'],
                 'id_lhh' => $_POST['id_lhh'],
                 'id_dvt' => $_POST['id_dvt'],
@@ -208,38 +263,28 @@ class AdminController extends BaseController {
                 'mo_ta_hh' => $_POST['mo_ta_hh'],
                 'hsd' => $_POST['hsd'],
                 'duoc_phep_ban' => isset($_POST['duoc_phep_ban']) ? 1 : 0,
-                'link_anh' => $_POST['old_img'] ?? '' // Mặc định lấy ảnh cũ
+                'link_anh' => $link_anh
             ];
 
-            // Xử lý Upload Ảnh
-            if (isset($_FILES['img']) && $_FILES['img']['error'] == 0) {
-                $targetDir = __DIR__ . '/../../public/uploads/';
-                // Tạo tên file ngẫu nhiên để tránh trùng
-                $fileName = time() . '_' . basename($_FILES['img']['name']);
-                $targetFile = $targetDir . $fileName;
-                
-                if (move_uploaded_file($_FILES['img']['tmp_name'], $targetFile)) {
-                    $data['link_anh'] = $fileName; // Cập nhật tên ảnh mới
-                }
-            }
-
-            // Gọi Model để lưu
-            if ($id) {
+            // 4. Gọi Model lưu dữ liệu
+            if ($isUpdate) {
                 // Cập nhật
+                // Lưu ý: Hàm updateProduct trong Model cần hỗ trợ nhận array $data
                 $result = $this->productModel->updateProduct($id, $data);
                 $msg = "Cập nhật";
             } else {
-                // Thêm mới
+                // Thêm mới (Cần đảm bảo hàm createProduct trong Model nhận ID từ $data['id_hh'])
                 $result = $this->productModel->createProduct($data);
                 $msg = "Thêm mới";
             }
 
             if ($result) {
-                $_SESSION['success'] = "$msg sản phẩm thành công!";
+                $_SESSION['success'] = "$msg sản phẩm thành công! (Mã: $id)";
             } else {
                 $_SESSION['error'] = "Có lỗi xảy ra khi $msg sản phẩm.";
             }
 
+            // 5. Quay lại danh sách
             $base = defined('BASE_PATH') ? BASE_PATH : '/NLN_NLCS/public';
             header('Location: ' . $base . '/admin/products');
             exit;
@@ -777,5 +822,68 @@ class AdminController extends BaseController {
             // Quay lại trang chi tiết
             $this->redirect("/admin/order-detail/$id");
         }
+    }
+
+    //Admin quản lý người dùng
+    /**
+     * Hiển thị form sửa khách hàng
+     */
+    public function editUser($id) {
+        // Lấy thông tin user từ Model
+        $customer = $this->userModel->getUserById($id);
+        
+        if (!$customer) {
+            $_SESSION['error'] = "Không tìm thấy khách hàng!";
+            $this->redirect('/admin/users');
+        }
+
+        $this->renderView('admin/users/form', [
+            'title' => 'Cập nhật thông tin khách hàng',
+            'user' => Auth::user(),
+            'customer' => $customer
+        ]);
+    }
+
+    /**
+     * Xử lý cập nhật thông tin (POST)
+     */
+    public function updateUser() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id'];
+            $password = $_POST['password'];
+            
+            $data = [
+                'ho_ten' => $_POST['ho_ten'],
+                'email' => $_POST['email'],
+                'sdt' => $_POST['sdt'],
+                'gioi_tinh' => $_POST['gioi_tinh'],
+                // Nếu có nhập mật khẩu thì hash, không thì để null
+                'mat_khau' => !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : null
+            ];
+
+            // Gọi Model cập nhật
+            if ($this->userModel->adminUpdateCustomer($id, $data)) {
+                $_SESSION['success'] = "Cập nhật khách hàng thành công!";
+            } else {
+                $_SESSION['error'] = "Có lỗi xảy ra!";
+            }
+            $this->redirect('/admin/users');
+        }
+    }
+
+    /**
+     * Xử lý xóa khách hàng
+     */
+    public function deleteUser($id) {
+        // Gọi Model xóa
+        $result = $this->userModel->deleteUser($id);
+        
+        if ($result === true) {
+            $_SESSION['success'] = "Đã xóa khách hàng thành công!";
+        } else {
+            // SỬA ĐOẠN NÀY: Nối thêm câu thông báo của bạn vào trước lỗi từ Model
+            $_SESSION['error'] = "Bạn không thể xóa khách hàng này!" . $result;
+        }
+        $this->redirect('/admin/users');
     }
 }
