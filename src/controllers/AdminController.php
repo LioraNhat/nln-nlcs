@@ -11,6 +11,7 @@ use App\Models\CategoryModel;
 use App\Models\PromotionModel;
 use App\Models\InventoryModel;
 use App\Models\SupplierModel;
+use App\Models\StatisticModel;
 
 class AdminController extends BaseController {
 
@@ -21,12 +22,12 @@ class AdminController extends BaseController {
     private $promotionModel;
     private $inventoryModel;
     private $supplierModel;
+    private $statisticModel;
 
     public function __construct() {
         parent::__construct();
         
-        // Kiểm tra quyền Admin thủ công (thay vì Auth::requireAdmin())
-        Auth::requireLogin(); // Đảm bảo đã đăng nhập
+        Auth::requireLogin();
         
         $user = Auth::user();
         if (!$user || $user['ID_ND'] !== 'AD') {
@@ -43,6 +44,7 @@ class AdminController extends BaseController {
         $this->promotionModel = new PromotionModel();
         $this->inventoryModel = new InventoryModel();
         $this->supplierModel = new SupplierModel();
+        $this->statisticModel = new StatisticModel();
     }
 
     /**
@@ -892,5 +894,61 @@ class AdminController extends BaseController {
             $_SESSION['error'] = "Bạn không thể xóa khách hàng này!" . $result;
         }
         $this->redirect('/admin/users');
+    }
+
+    // ======================================================
+    // BÁO CÁO THỐNG KÊ ADMIN
+    // ======================================================
+    public function statistics() {
+        $statType = $_POST['stat_type'] ?? '';
+        // Mặc định lấy từ đầu tháng đến hiện tại
+        $dateStart = $_POST['date_start'] ?? date('Y-m-01');
+        $dateEnd = $_POST['date_end'] ?? date('Y-m-d');
+        
+        $data = ['labels' => [], 'values' => []];
+        $title = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $statType) {
+            switch ($statType) {
+                case 'best-selling':
+                    $title = 'Sản phẩm bán chạy nhất';
+                    $results = $this->statisticModel->getBestSellingProducts($dateStart, $dateEnd);
+                    break;
+                case 'revenue':
+                    $title = 'Tổng doanh thu theo ngày';
+                    $results = $this->statisticModel->getRevenue($dateStart, $dateEnd);
+                    break;
+                case 'orders':
+                    $title = 'Tổng số đơn hàng theo ngày';
+                    $results = $this->statisticModel->getOrdersCount($dateStart, $dateEnd);
+                    break;
+                case 'cancelled-orders':
+                    $title = 'Đơn hàng đã hủy theo ngày';
+                    $results = $this->statisticModel->getCancelledOrders($dateStart, $dateEnd);
+                    break;
+                case 'top-customers':
+                    $title = 'Top 5 Khách hàng mua nhiều nhất';
+                    $results = $this->statisticModel->getTopCustomers($dateStart, $dateEnd);
+                    break;
+                default:
+                    $results = [];
+            }
+
+            // Chuẩn bị dữ liệu cho Chart.js
+            foreach ($results as $row) {
+                $data['labels'][] = $row['label'];
+                $data['values'][] = (float)$row['value'];
+            }
+        }
+
+        $this->renderView('admin/statistics/index', [
+            'title' => 'Báo cáo thống kê',
+            'user' => Auth::user(),
+            'statType' => $statType,
+            'dateStart' => $dateStart,
+            'dateEnd' => $dateEnd,
+            'chartTitle' => $title,
+            'chartData' => $data
+        ]);
     }
 }

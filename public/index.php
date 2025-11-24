@@ -99,5 +99,9 @@ $router->add('POST', 'admin/users/update', 'AdminController@updateUser');
 $router->add('GET', 'admin/users/delete/{id}', 'AdminController@deleteUser');
 $router->add('POST', 'admin/users/update-role', 'AdminController@updateUserRole');
 
+// --- Thống kê ---
+$router->add('GET', 'admin/statistics', 'AdminController@statistics');
+$router->add('POST', 'admin/statistics', 'AdminController@statistics'); // Cần POST để gửi form lọc
+
 // KHỞI CHẠY
 $router->run();
