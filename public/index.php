@@ -103,5 +103,13 @@ $router->add('POST', 'admin/users/update-role', 'AdminController@updateUserRole'
 $router->add('GET', 'admin/statistics', 'AdminController@statistics');
 $router->add('POST', 'admin/statistics', 'AdminController@statistics'); // Cần POST để gửi form lọc
 
+// --- Cài đặt hệ thống ---
+$router->add('GET', 'admin/settings', 'AdminController@settings');
+$router->add('POST', 'admin/settings/update', 'AdminController@updateSettings');
+
+// --- Hồ sơ Admin ---
+$router->add('GET', 'admin/profile', 'AdminController@profile');
+$router->add('POST', 'admin/profile/update', 'AdminController@updateProfile');
+
 // KHỞI CHẠY
 $router->run();

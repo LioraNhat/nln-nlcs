@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 18, 2025 lúc 02:58 AM
+-- Thời gian đã tạo: Th10 24, 2025 lúc 07:42 PM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -38,6 +38,28 @@ CREATE TABLE `binh_luan` (
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `cau_hinh`
+--
+
+CREATE TABLE `cau_hinh` (
+  `meta_key` varchar(50) NOT NULL,
+  `meta_value` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `cau_hinh`
+--
+
+INSERT INTO `cau_hinh` (`meta_key`, `meta_value`) VALUES
+('site_address', 'Ninh Kiều, Việt Nam'),
+('site_email', 'admin@greenmeal.com'),
+('site_logo', 'system_logo.png'),
+('site_phone', '0123456789'),
+('site_title', 'GREEN MEAL ADMIN');
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `chi_tiet_don_hang`
 --
 
@@ -58,14 +80,20 @@ INSERT INTO `chi_tiet_don_hang` (`ID_DH`, `ID_HH`, `SO_LUONG_BAN_RA`, `don_gia_b
 ('DH0B5', '00008', 1, 0),
 ('DH0D8', '00006', 4, 0),
 ('DH0D8', '00041', 1, 0),
+('DH17B', '00008', 1, 0),
 ('DH31E', '00003', 1, 0),
 ('DH706', '00004', 3, 0),
 ('DH706', '00008', 2, 0),
+('DH737', '00006', 1, 0),
 ('DH7A2', '00002', 1, 0),
 ('DH7A2', '00033', 1, 0),
+('DH7C4', '00003', 1, 0),
 ('DH9B2', '00006', 1, 0),
 ('DHA4D', '00096', 1, 0),
 ('DHA72', '00002', 1, 0),
+('DHB5A', '00006', 1, 0),
+('DHB5A', '00008', 1, 0),
+('DHBCC', '00004', 1, 0),
 ('DHD08', '00001', 1, 0),
 ('DHD45', '00128', 1, 0),
 ('DHF32', '00003', 1, 0),
@@ -88,13 +116,16 @@ CREATE TABLE `chi_tiet_gio_hang` (
 --
 
 INSERT INTO `chi_tiet_gio_hang` (`ID_GH`, `ID_HH`, `SO_LUONG_SP`) VALUES
-('GH31f', '00003', 1),
+('GH31f', '00004', 1),
 ('GH444', '00002', 3),
 ('GH444', '00003', 1),
 ('GH444', '00013', 1),
 ('GH444', '00018', 2),
 ('GH444', '00019', 3),
 ('GH444', '00059', 1),
+('GH97e', '00018', 1),
+('GH97e', '00030', 1),
+('GH97e', '00109', 1),
 ('GHab0', '00058', 1),
 ('GHab1', '00005', 1),
 ('GHcf3', '00059', 1),
@@ -112,6 +143,14 @@ CREATE TABLE `chi_tiet_phieu_nhap` (
   `SO_LUONG_NHAP` int(11) NOT NULL,
   `DON_GIA_NHAP` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `chi_tiet_phieu_nhap`
+--
+
+INSERT INTO `chi_tiet_phieu_nhap` (`ID_PN`, `ID_HH`, `SO_LUONG_NHAP`, `DON_GIA_NHAP`) VALUES
+('PN001', '00014', 1, 20000.00),
+('PN001', '00123', 7, 300000.00);
 
 -- --------------------------------------------------------
 
@@ -160,19 +199,7 @@ CREATE TABLE `dia_chi_giao_hang` (
 --
 
 INSERT INTO `dia_chi_giao_hang` (`ID_DIA_CHI`, `ID_TK`, `TEN_NGUOI_NHAN`, `SDT_GH`, `ID_TINH_TP`, `TEN_TINH_TP`, `ID_QUAN_HUYEN`, `TEN_QUAN_HUYEN`, `ID_XA_PHUONG`, `TEN_XA_PHUONG`, `DIA_CHI_CHI_TIET`, `IS_DEFAULT`) VALUES
-(17, 'TK690a2d551daad', 'lam', '099', '24', 'Tỉnh Bắc Giang', '223', 'Huyện Hiệp Hòa', '7864', 'Xã Mai Trung', '123', 0),
-(18, 'TK690a2d551daad', 'Quân', '099', '24', 'Tỉnh Bắc Giang', '222', 'Thị xã Việt Yên', '7795', 'Phường Nếnh', '123', 0),
-(19, 'TK690a2d551daad', 'lam', '099', '24', 'Tỉnh Bắc Giang', '215', 'Huyện Yên Thế', '7288', 'Thị trấn Phồn Xương', '123', 0),
-(20, 'TK690a2d551daad', 'ca', '099', '10', 'Tỉnh Lào Cai', '83', 'Huyện Mường Khương', '2788', 'Xã Bản Lầu', '222', 0),
-(21, 'TK690a2d551daad', 'hoa', '011', '24', 'Tỉnh Bắc Giang', '215', 'Huyện Yên Thế', '7291', 'Xã Tân Sỏi', '43', 0),
-(22, 'TK690a2d551daad', 'tấn', '099', '92', 'Thành phố Cần Thơ', '923', 'Quận Thốt Nốt', '31210', 'Phường Thới Thuận', '234', 0),
-(23, 'TK690a2d551daad', 'lam', '099', '95', 'Tỉnh Bạc Liêu', '961', 'Huyện Hoà Bình', '31918', 'Xã Vĩnh Bình', '12', 1),
-(26, 'TK690a2db982cee', 'dao', '02222', '22', 'Tỉnh Quảng Ninh', '203', 'Huyện Vân Đồn', '7018', 'Xã Bản Sen', '5', 0),
-(28, 'TK690a2db982cee', 'dao', '02222', '25', 'Tỉnh Phú Thọ', '230', 'Huyện Đoan Hùng', '8044', 'Xã Chân Mộng', 't', 0),
-(29, 'TK690a2db982cee', 'hoa', '02222', '22', 'Tỉnh Quảng Ninh', '203', 'Huyện Vân Đồn', '7024', 'Xã Quan Lạn', '34', 1),
-(30, 'TK690a29dd24ac3', 'tram', '011111', '22', 'Tỉnh Quảng Ninh', '194', 'Thành phố Móng Cái', '6751', 'Phường Bình Ngọc', 'Hẻm 156', 0),
-(31, 'TK69186339d8aab', 'teo', '09123', '24', 'Tỉnh Bắc Giang', '223', 'Huyện Hiệp Hòa', '7873', 'Xã Xuân Cẩm', '123', 0),
-(32, 'TK69187df4a4440', 'capy', '0437', '22', 'Tỉnh Quảng Ninh', '205', 'Thành phố Đông Triều', '7117', 'Phường Yên Thọ', '123', 0);
+(67, 'TK690a29dd24ac3', 'tram', '011111', '22', 'Tỉnh Quảng Ninh', '206', 'Thị xã Quảng Yên', '7174', 'Phường Phong Hải', '123', 0);
 
 -- --------------------------------------------------------
 
@@ -202,15 +229,20 @@ CREATE TABLE `don_hang` (
 INSERT INTO `don_hang` (`ID_DH`, `ID_PTTT`, `ID_TK`, `DIA_CHI_GIAO_DH`, `NGAY_GIO_TAO_DON`, `NGAY_DU_KIEN_GIAO`, `TONG_GIA_TRI_DH`, `TIEN_GIAM_GIA`, `SO_TIEN_THANH_TOAN`, `TRANG_THAI_THANH_TOAN`, `NGAY_THANH_TOAN`, `TRANG_THAI_BL`) VALUES
 ('DH081', 'PTTT1', 'TK69187df4a4440', 'capy (0437)\nĐịa chỉ: 123, Phường Yên Thọ, Thành phố Đông Triều, Tỉnh Quảng Ninh', '2025-11-15 20:25:50', '2025-11-18', 198000.00, 39600.00, 158400.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH0B5', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:19:23', '2025-11-14', 188000.00, 17800.00, 170200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
-('DH0D8', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:29:54', '2025-11-14', 749000.00, 149800.00, 599200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DH0D8', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:29:54', '2025-11-14', 749000.00, 149800.00, 599200.00, 'Đã thanh toán', '2025-11-24 17:09:07', 'Chưa đánh giá'),
+('DH17B', 'PTTT1', 'TK690a394e5231c', 'aa (0223)\nĐịa chỉ: 123B1, Phường Châu Văn Liêm, Quận Ô Môn, Thành phố Cần Thơ', '2025-11-21 17:40:40', '2025-11-24', 89000.00, 17800.00, 71200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH31E', 'PTTT1', 'TK69187df4a4440', 'capy (0437)\nĐịa chỉ: 123, Phường Yên Thọ, Thành phố Đông Triều, Tỉnh Quảng Ninh', '2025-11-15 22:04:19', '2025-11-18', 89000.00, 0.00, 89000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH706', 'PTTT1', 'TK690a29dd24ac3', 'tram (011111)\nĐịa chỉ: Hẻm 156, Phường Bình Ngọc, Thành phố Móng Cái, Tỉnh Quảng Ninh', '2025-11-15 14:57:14', '2025-11-18', 475000.00, 35600.00, 439400.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DH737', 'PTTT1', 'TK690a394e5231c', 'aa (022345)\nĐịa chỉ: 123, Xã Phúc Sơn, Thị xã Nghĩa Lộ, Tỉnh Yên Bái', '2025-11-23 00:25:35', '2025-11-26', 110000.00, 22000.00, 88000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH7A2', 'PTTT1', 'TK690a2db982cee', 'dao (02222)\nĐịa chỉ: t, Xã Chân Mộng, Huyện Đoan Hùng, Tỉnh Phú Thọ', '2025-11-11 19:18:45', '2025-11-14', 219000.00, 28000.00, 191000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DH7C4', 'PTTT1', 'TK690a394e5231c', 'aa (0223)\nĐịa chỉ: 123B1, Phường Châu Văn Liêm, Quận Ô Môn, Thành phố Cần Thơ', '2025-11-20 22:06:50', '2025-11-23', 89000.00, 0.00, 89000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH9B2', 'PTTT1', 'TK690a2d551daad', 'lam (099)\nĐịa chỉ: 123, Xã Đoan Bái, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-11 03:16:32', '2025-11-14', 110000.00, 22000.00, 88000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHA4D', 'PTTT1', 'TK69186339d8aab', 'teo (09123)\nĐịa chỉ: 123, Xã Xuân Cẩm, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-15 19:11:17', '2025-11-18', 30000.00, 6000.00, 24000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHA72', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:13:57', '2025-11-14', 79000.00, 0.00, 79000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DHB5A', 'PTTT1', 'TK690a394e5231c', 'aa (0223)\nĐịa chỉ: 123B1, Phường Châu Văn Liêm, Quận Ô Môn, Thành phố Cần Thơ', '2025-11-20 22:07:20', '2025-11-23', 199000.00, 39800.00, 159200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DHBCC', 'PTTT1', 'TK690a29dd24ac3', 'tram (011111)\nĐịa chỉ: 123, Xã Liên Hòa, Thị xã Quảng Yên, Tỉnh Quảng Ninh', '2025-11-24 17:53:31', '2025-11-27', 99000.00, 0.00, 99000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHD08', 'PTTT1', 'TK690a2d551daad', 'lam (099)\nĐịa chỉ: 123, Xã Đoan Bái, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-11 03:02:03', '2025-11-14', 89000.00, 17800.00, 71200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
-('DHD45', 'PTTT1', 'TK69186339d8aab', 'teo (09123)\nĐịa chỉ: 123, Xã Xuân Cẩm, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-15 22:22:51', '2025-11-18', 500000.00, 100000.00, 400000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DHD45', 'PTTT1', 'TK69186339d8aab', 'teo (09123)\nĐịa chỉ: 123, Xã Xuân Cẩm, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-15 22:22:51', '2025-11-18', 500000.00, 100000.00, 400000.00, 'Đã thanh toán', '2025-11-24 17:06:20', 'Chưa đánh giá'),
 ('DHF32', 'PTTT1', 'TK69187df4a4440', 'capy (0437)\nĐịa chỉ: 123, Phường Yên Thọ, Thành phố Đông Triều, Tỉnh Quảng Ninh', '2025-11-15 22:04:16', '2025-11-18', 89000.00, 0.00, 89000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHFF3', 'PTTT2', 'TK690a2d551daad', 'lam (099)\nĐịa chỉ: 123, Xã Đoan Bái, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-11 03:03:21', '2025-11-14', 89000.00, 17800.00, 71200.00, 'Đã thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá');
 
@@ -232,16 +264,21 @@ CREATE TABLE `don_hang_hien_tai` (
 
 INSERT INTO `don_hang_hien_tai` (`ID_DH`, `TRANG_THAI_DHHT`, `NGAY_GIO_CAP_NHAT`) VALUES
 ('DH081', 'Đã hủy', '2025-11-15 22:20:19'),
-('DH0B5', 'Chờ xử lý', '2025-11-15 22:11:18'),
-('DH0D8', 'Chờ xử lý', '2025-11-15 22:11:18'),
+('DH0B5', 'Đã hủy', '2025-11-24 17:22:32'),
+('DH0D8', 'Giao hàng thành công', '2025-11-24 17:09:07'),
+('DH17B', 'Đã hủy', '2025-11-23 00:08:37'),
 ('DH31E', 'Đã hủy', '2025-11-15 22:11:35'),
 ('DH706', 'Chờ xử lý', '2025-11-15 22:11:18'),
+('DH737', 'Giao hàng thành công', '2025-11-24 16:51:00'),
 ('DH7A2', 'Chờ xử lý', '2025-11-15 22:11:18'),
+('DH7C4', 'Đã hủy', '2025-11-20 22:07:03'),
 ('DH9B2', 'Chờ xử lý', '2025-11-15 22:11:18'),
 ('DHA4D', 'Chờ xử lý', '2025-11-15 22:11:18'),
 ('DHA72', 'Chờ xử lý', '2025-11-15 22:11:18'),
+('DHB5A', 'Đã hủy', '2025-11-21 17:40:29'),
+('DHBCC', 'Chờ xử lý', '2025-11-24 17:53:31'),
 ('DHD08', 'Chờ xử lý', '2025-11-15 22:11:18'),
-('DHD45', 'Chờ xử lý', '2025-11-15 22:22:51'),
+('DHD45', 'Giao hàng thành công', '2025-11-24 17:06:20'),
 ('DHF32', 'Đã hủy', '2025-11-15 22:19:43'),
 ('DHFF3', 'Chờ xử lý', '2025-11-15 22:11:18');
 
@@ -406,11 +443,9 @@ INSERT INTO `gia_ban_hien_tai` (`ID_HH`, `ID_TD`, `GIA_HIEN_TAI`) VALUES
 ('00122', 'TD003', 89000.00),
 ('00123', 'TD003', 150000.00),
 ('00124', 'TD003', 110000.00),
-('00125', 'TD003', 120000.00),
 ('00126', 'TD003', 119000.00),
-('00127', 'TD003', 180000.00),
 ('00128', 'TD003', 500000.00),
-('00129', 'TD003', 99000.00);
+('00129', 'TD003', 100000.00);
 
 -- --------------------------------------------------------
 
@@ -434,7 +469,7 @@ INSERT INTO `gio_hang` (`ID_GH`, `ID_TK`, `NGAY_TAO_GH`, `NGAY_CAP_NHAT_GH`) VAL
 ('GH444', 'TK69187df4a4440', '2025-11-15 20:19:48', '2025-11-15 20:19:48'),
 ('GH690', 'TK690a29dd24ac3', '2025-11-04 23:29:17', '2025-11-04 23:29:17'),
 ('GH691', 'TK6912f22e29d58', '2025-11-11 15:22:06', '2025-11-11 15:22:06'),
-('GH6b9', 'TK690b6c23666b4', '2025-11-05 22:24:19', '2025-11-05 22:24:19'),
+('GH97e', 'TK691be716ec97b', '2025-11-18 10:25:11', '2025-11-18 10:25:11'),
 ('GHa2e', 'TK690b6bf878a2b', '2025-11-05 22:23:36', '2025-11-05 22:23:36'),
 ('GHab0', 'TK690a2d551daad', '2025-11-04 23:44:05', '2025-11-04 23:44:05'),
 ('GHab1', 'TK69186339d8aab', '2025-11-15 18:25:45', '2025-11-15 18:25:45'),
@@ -480,7 +515,7 @@ INSERT INTO `hang_hoa` (`ID_HH`, `ID_LHH`, `ID_DVT`, `ID_KM`, `TEN_HH`, `link_an
 ('00011', 'LHH01', 'DVT01', 'KM003', 'Cá Basa Kho Tiêu (Khay 300g) 99k)', '00011.png', 'Khẩu phần: Thành phần: Cá Basa S.P Size 2-2.5: 300gr + Tiêu Đen Xay Việt San: 10 g...', 50.00, 1, 1, '2025-11-10 23:59:59'),
 ('00012', 'LHH01', 'DVT01', NULL, 'Cá Basa Kho Tộ GreenMeal (Khay 300G 55k)', '00012.png', 'Khẩu phần: 1-2 người ăn. Thành phần: Cá Basa Kho Tộ [GreenMeal] - phần 2 người ăn: Cá Basa: 300g...', 50.00, 1, 1, '2025-11-10 23:59:59'),
 ('00013', 'LHH01', 'DVT01', 'KM003', 'Cá Bống Đục Kho Tiêu (Khay 300g 89k)', '00013.png', 'Khẩu phần: Cá Bống Đục Kho Tiêu (Khay 300g), Cá Bống S.P Sz 20-25 Sốt Kho GreenMeal...', 50.00, 1, 1, '2025-11-10 23:59:59'),
-('00014', 'LHH01', 'DVT01', NULL, 'Cá Bống Tượng Kho Tiêu (Khay 159k)', '00014.png', 'Khẩu phần: 2-3 Người Ăn. Thành phần: Cá Bống Tượng Sz 20-25 con: 300gr + Sốt Kho GreenMeal...', 50.00, 1, 1, '2025-11-10 23:59:59'),
+('00014', 'LHH01', 'DVT01', NULL, 'Cá Bống Tượng Kho Tiêu (Khay 159k)', '00014.png', 'Khẩu phần: 2-3 Người Ăn. Thành phần: Cá Bống Tượng Sz 20-25 con: 300gr + Sốt Kho GreenMeal...', 51.00, 1, 1, '2025-11-10 23:59:59'),
 ('00015', 'LHH01', 'DVT01', NULL, 'Cá Bớp Kho Thịt Ba Rọi (Khay 189k)', '00015.png', 'Khẩu phần: 1-2 người ăn. Thành phần: Cá Bớp: 300g + Ba Rọi Heo: 150g + Sốt Kho GreenMeal...', 50.00, 1, 1, '2025-11-10 23:59:59'),
 ('00016', 'LHH02', 'DVT01', NULL, 'Bắp Cải Trái Tim Cắt Sẵn (Khay 300g)', '00016.png', 'Thành phần: Bắp cải trái tim cắt sẵn (300g)', 50.00, 1, 1, '2025-11-15 23:59:59'),
 ('00017', 'LHH02', 'DVT01', NULL, 'Bắp Cải Xào Cà Chua (Khay 600Gr)', '00017.png', 'Thành phần: + Bắp Cải Trắng: 300 g + Cà chua Rita: 1 trái/75g + Sốt Xào GreenMeal Kitchen (Túi 50g): 1 túi + Hành Tím Xay GreenMeal', 50.00, 1, 1, '2025-11-15 23:59:59'),
@@ -589,13 +624,11 @@ INSERT INTO `hang_hoa` (`ID_HH`, `ID_LHH`, `ID_DVT`, `ID_KM`, `TEN_HH`, `link_an
 ('00120', 'LHH10', 'DVT02', NULL, 'Lê Hàn Quốc (Trái)', '00120.png', 'Lê Hàn Quốc quả to, giòn, mọng nước, vị ngọt mát.', 100.00, 1, 0, '2025-11-25 23:59:59'),
 ('00121', 'LHH10', 'DVT01', NULL, 'Dâu Tây Hàn Quốc (Hộp 330g)', '00121.png', 'Dâu tây Hàn Quốc, quả to, thơm, vị ngọt.', 100.00, 1, 0, '2025-11-25 23:59:59'),
 ('00122', 'LHH10', 'DVT02', NULL, 'Táo Gala Mỹ (Kg)', '00122.png', 'Táo Gala Mỹ, vỏ sọc đỏ vàng, giòn, vị ngọt nhẹ.', 100.00, 1, 0, '2025-11-25 23:59:59'),
-('00123', 'LHH10', 'DVT02', NULL, 'Lựu Peru (Kg)', '00123.png', 'Lựu Peru hạt mềm, ruột đỏ, mọng nước, vị ngọt.', 100.00, 1, 0, '2025-11-25 23:59:59'),
+('00123', 'LHH10', 'DVT02', NULL, 'Lựu Peru (Kg)', '00123.png', 'Lựu Peru hạt mềm, ruột đỏ, mọng nước, vị ngọt.', 107.00, 1, 0, '2025-11-25 23:59:59'),
 ('00124', 'LHH10', 'DVT02', NULL, 'Cam Vàng Navel Mỹ (Kg)', '00124.png', 'Cam Navel không hạt, vỏ vàng, mọng nước, ngọt.', 100.00, 1, 0, '2025-11-25 23:59:59'),
-('00125', 'LHH10', 'DVT01', NULL, 'Phúc Bồn Tử (Hộp 170g)', '00125.png', 'Phúc bồn tử (Raspberry) nhập khẩu, vị chua ngọt nhẹ.', 100.00, 1, 0, '2025-11-25 23:59:59'),
 ('00126', 'LHH10', 'DVT01', NULL, 'Táo Rockit New Zealand (Ống 4 trái)', '00126.png', 'Táo Rockit NZ, size nhỏ, giòn tan, ngọt đậm, đóng ống tiện lợi.', 100.00, 1, 0, '2025-11-25 23:59:59'),
-('00127', 'LHH10', 'DVT02', NULL, 'Mận Đen Mỹ (Kg)', '00127.png', 'Mận đen Mỹ, ruột vàng, vị ngọt, giòn.', 100.00, 1, 0, '2025-11-25 23:59:59'),
 ('00128', 'LHH10', 'DVT02', 'KM003', 'Dưa Lưới Nhật Bản (Trái)', '00128.png', 'Dưa lưới Nhật Bản (Muskmelon) ruột xanh, ngọt thơm.', 100.00, 1, 0, '2025-11-25 23:59:59'),
-('00129', 'LHH10', 'DVT02', NULL, 'Táo Xanh Granny Smith (Kg)', '00129.png', 'Táo xanh Granny Smith, giòn, vị chua đậm, dùng làm nước ép.', 100.00, 1, 0, '2025-11-25 23:59:59');
+('00129', 'LHH10', 'DVT02', 'KM003', 'Táo Xanh Granny Smith (Kg)', '00129.png', 'Táo xanh Granny Smith, giòn, vị chua đậm, dùng làm nước ép.', 90.00, 1, 0, '2025-11-25 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -617,10 +650,9 @@ CREATE TABLE `khuyen_mai` (
 --
 
 INSERT INTO `khuyen_mai` (`ID_KM`, `TEN_KM`, `PHAN_TRAM_KM`, `NGAY_BD_KM`, `NGAY_KT_KM`, `TRANG_THAI_KM`) VALUES
-('KM001', 'Chào mừng khách hàng mới', 15.00, '2025-10-01 00:00:00', '2026-02-01 23:59:59', 'Đang diễn ra'),
 ('KM002', 'Giảm giá cuối tuần (Hải sản)', 10.00, '2025-10-24 00:00:00', '2025-10-26 23:59:59', 'Đã kết thúc'),
 ('KM003', 'Ưu đãi đặc biệt', 20.00, '2025-11-01 00:00:00', '2026-01-31 08:52:08', 'Đang diễn ra'),
-('KM004', 'Tuần lễ Vàng (Rau củ)', 12.00, '2025-09-15 00:00:00', '2025-09-21 23:59:59', 'Đã kết thúc'),
+('KM004', 'Tuần lễ Vàng (Rau củ)', 12.00, '2025-11-23 00:00:00', '2025-11-30 23:59:00', 'Sắp diễn ra'),
 ('KM005', 'Flash Sale (Trái cây)', 25.00, '2025-10-25 10:00:00', '2025-10-25 14:00:00', 'Sắp diễn ra');
 
 -- --------------------------------------------------------
@@ -692,7 +724,7 @@ INSERT INTO `nha_cung_cap` (`ID_NCC`, `TEN_NCC`, `DIA_CHI_NCC`, `SDT_NCC`, `EMAI
 ('NCC02', 'Công ty Cổ phần Việt Nam Kỹ nghệ Súc sản (VISSAN)', '420 Nơ Trang Long, Phường 13, Quận Bình Thạnh, TP. Hồ Chí Minh', '19001960', 'vissan@vissan.com.vn'),
 ('NCC03', 'Công ty TNHH Dalatroi (Rau củ Đà Lạt)', 'Phường 12, TP. Đà Lạt, Tỉnh Lâm Đồng', '02633828999', 'info@dalatroi.com'),
 ('NCC04', 'Tập đoàn Thủy sản Minh Phú', 'Khu Công nghiệp Phường 8, TP. Cà Mau, Tỉnh Cà Mau', '02903838262', 'info@minhphu.com'),
-('NCC05', 'Công ty Cổ phần Vĩnh Hoàn (VHC)', 'Quốc lộ 30, Phường 11, TP. Cao Lãnh, Tỉnh Đồng Tháp', '02773891166', 'info@vinhhoan.com');
+('NCC05', 'Công ty TNHH Chicken Talk', 'Ninh Kiều, Cần Thơ', '0999999999', 'ctalk@gmail.com');
 
 -- --------------------------------------------------------
 
@@ -709,6 +741,13 @@ CREATE TABLE `phieu_nhap` (
   `TONG_GIA_TRI_PHIEU_NHAP` decimal(10,2) NOT NULL,
   `CHUNG_TU_GOC` varchar(1000) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `phieu_nhap`
+--
+
+INSERT INTO `phieu_nhap` (`ID_PN`, `ID_NCC`, `NGAY_LAP_PHIEU_NHAP`, `TONG_TIEN_NHAP`, `VAT`, `TONG_GIA_TRI_PHIEU_NHAP`, `CHUNG_TU_GOC`) VALUES
+('PN001', 'NCC01', '2025-11-24 07:01:00', 2120000.00, 0.00, 2120000.00, 'HD00123');
 
 -- --------------------------------------------------------
 
@@ -755,17 +794,17 @@ CREATE TABLE `tai_khoan` (
 --
 
 INSERT INTO `tai_khoan` (`ID_TK`, `ID_GH`, `ID_ND`, `HO_TEN`, `GIOI_TINH`, `SDT_TK`, `EMAIL`, `MAT_KHAU`, `NGAY_GIO_TAO_TK`, `NGAY_GIO_CAP_NHAT`, `DIA_CHI_AVT`) VALUES
-('TK690a29dd24ac3', 'GH690', 'AD', 'tram', 'Nữ', '011111', 'tram@gmail.com', '$2y$10$htapMP/bY7YUDj1Y5DEyc.isJuNG298XFqepSQeKPHfVaQum9/kY2', '2025-11-04 23:29:17', '2025-11-04 23:29:17', NULL),
-('TK690a2d551daad', 'GHab0', 'AD', 'lam', 'Nữ', '099', 'lam@gmail.com', '$2y$10$5bQuBHHhW2OqtbHjT7dvZewvj5tryRVKbQs2GLeNH/E407MebgiCy', '2025-11-04 23:44:05', '2025-11-04 23:44:05', NULL),
-('TK690a2db982cee', 'GHcf3', 'KH', 'dao', 'Nữ', '02222', 'dao@gmail.com', '$2y$10$A7MpPzNNeT2Dd6pujlS89.vdAMcECW8VRo/mjG59eGcOX1.E0g/hi', '2025-11-04 23:45:45', '2025-11-09 23:53:04', NULL),
-('TK690a394e5231c', 'GH31f', 'KH', 'aa', 'Nam', '0223', 'a@gmail.com', '$2y$10$tktAmDmQB3Q.Ewy5FiA.gumRI3P8pdIHpAPY/7U/vei3NJG1IeGOa', '2025-11-05 00:35:10', '2025-11-05 00:35:10', NULL),
+('TK690a29dd24ac3', 'GH690', 'AD', 'tram', 'Nam', '011111', 'tram@gmail.com', '$2y$10$9vLulYFgTnk839eWCr90BeDVRbBReDIJx16gRmS2GL75OqBZoTJm6', '2025-11-04 23:29:17', '2025-11-25 01:14:24', NULL),
+('TK690a2d551daad', 'GHab0', 'KH', 'lam', 'Nữ', '099', 'lam@gmail.com', '$2y$10$5bQuBHHhW2OqtbHjT7dvZewvj5tryRVKbQs2GLeNH/E407MebgiCy', '2025-11-04 23:44:05', '2025-11-04 23:44:05', NULL),
+('TK690a2db982cee', 'GHcf3', 'KH', 'dao', 'Nam', '02222', 'dao@gmail.com', '$2y$10$A7MpPzNNeT2Dd6pujlS89.vdAMcECW8VRo/mjG59eGcOX1.E0g/hi', '2025-11-04 23:45:45', '2025-11-24 17:39:09', NULL),
+('TK690a394e5231c', 'GH31f', 'KH', 'aaa', 'Nữ', '0223456', 'a@gmail.com', '$2y$10$u0v0RgcZ5WmhMjKFuRWMP.WehS9PLWgHpIX8JPEkuIUzV064FOdhm', '2025-11-05 00:35:10', '2025-11-23 00:43:24', NULL),
 ('TK690b6bf878a2b', 'GHa2e', 'KH', 'hoa', 'Nam', '0234', 'hoa@gmail.com', '$2y$10$1KX1OMj05MNT0DzzAxyPnuy0OECH486Sf/T8cnhY1CYomdDPoZNoa', '2025-11-05 22:23:36', '2025-11-05 22:23:36', NULL),
-('TK690b6c23666b4', 'GH6b9', 'KH', 'ti@gmail.com', 'Nữ', '0222', 'ti@gmail.com', '$2y$10$uojuuWm80noDerbqpYH3DebPP.dX7TE6bfxp.6xieRkcfqVjL3JrK', '2025-11-05 22:24:19', '2025-11-05 22:24:19', NULL),
 ('TK6912f22e29d58', 'GH691', 'KH', 'Sơn Tùng MTP', 'Nữ', '09999', 'mtp@gmail.com', '$2y$10$UI5MN3fT2LVQy7aP9z7PWeg1FELFFv0TkPMma0zot4h5W4Rb9vBBO', '2025-11-11 15:22:06', '2025-11-11 15:22:06', NULL),
 ('TK691862df94dd9', 'GHddd', 'KH', 'mia', 'Nữ', '07878', 'mia@gmail.com', '$2y$10$vhhTbPwLD8gQqDZu1Ld8g.uaJ38KXm5fb.22P71820d1ZZiEXT3kS', '2025-11-15 18:24:15', '2025-11-15 18:24:15', NULL),
 ('TK69186339d8aab', 'GHab1', 'KH', 'teo', 'Nữ', '09123', 'teo@gmail.com', '$2y$10$kyPLcJqfAhvkx4wWp3VxjOzq99UeUIcLBJ46I2O8SYb3NHVu2sW2m', '2025-11-15 18:25:46', '2025-11-15 18:25:46', NULL),
 ('TK69186da1a7b90', 'GHb93', 'KH', 'siêu nhân', 'Nam', '07895', 'sieunhan@gmail.com', '$2y$10$TtEsdp9oGktbcs4nbLpjxu08KkmGUW63971206uCS9noJaGUKKIc2', '2025-11-15 19:10:09', '2025-11-15 19:10:09', NULL),
-('TK69187df4a4440', 'GH444', 'KH', 'capy', 'Nam', '0437', 'capy@gmail.com', '$2y$10$Edg17i5d3wh0jUynSq/veuvmTrQhvaw/kf13SqKfO47QW37rJ7hwq', '2025-11-15 20:19:48', '2025-11-15 20:19:48', NULL);
+('TK69187df4a4440', 'GH444', 'KH', 'capy', 'Nam', '0437', 'capy@gmail.com', '$2y$10$Edg17i5d3wh0jUynSq/veuvmTrQhvaw/kf13SqKfO47QW37rJ7hwq', '2025-11-15 20:19:48', '2025-11-15 20:19:48', NULL),
+('TK691be716ec97b', 'GH97e', 'KH', 'Tú', 'Nam', '0373205594', 'tu@gmail.com', '$2y$10$yVoTKBwUix0N5EY1dC0LA.y14MqfIxKBXmIQ88NAxm8n5nkCHJRlK', '2025-11-18 10:25:11', '2025-11-24 23:51:20', NULL);
 
 -- --------------------------------------------------------
 
@@ -799,6 +838,12 @@ INSERT INTO `thoi_diem` (`ID_TD`, `NGAY_BD_GIA_BAN`, `NGAY_KT_GIA_BAN`) VALUES
 ALTER TABLE `binh_luan`
   ADD PRIMARY KEY (`ID_HH`,`ID_BL`),
   ADD KEY `FK_BINH_LUAN_TK_BL_TAI_KHOA` (`ID_TK`);
+
+--
+-- Chỉ mục cho bảng `cau_hinh`
+--
+ALTER TABLE `cau_hinh`
+  ADD PRIMARY KEY (`meta_key`);
 
 --
 -- Chỉ mục cho bảng `chi_tiet_don_hang`
@@ -937,7 +982,7 @@ ALTER TABLE `thoi_diem`
 -- AUTO_INCREMENT cho bảng `dia_chi_giao_hang`
 --
 ALTER TABLE `dia_chi_giao_hang`
-  MODIFY `ID_DIA_CHI` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `ID_DIA_CHI` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
 
 --
 -- Các ràng buộc cho các bảng đã đổ

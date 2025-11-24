@@ -3,6 +3,7 @@
 namespace App\Core;
 
 use App\Models\CategoryModel;
+use App\Models\SettingModel;
 
 abstract class BaseController {
 
@@ -34,6 +35,15 @@ abstract class BaseController {
             } catch (\Exception $e) {
                 // Nếu lỗi DB, gán mảng rỗng để web vẫn chạy được
                 $this->viewData['categories'] = [];
+            }
+        }
+
+        if (class_exists('App\Models\SettingModel')) {
+            try {
+                $settingModel = new SettingModel();
+                $this->viewData['settings'] = $settingModel->getAllSettings();
+            } catch (\Exception $e) {
+                $this->viewData['settings'] = [];
             }
         }
     }

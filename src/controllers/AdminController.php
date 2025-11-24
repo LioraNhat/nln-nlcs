@@ -12,6 +12,7 @@ use App\Models\PromotionModel;
 use App\Models\InventoryModel;
 use App\Models\SupplierModel;
 use App\Models\StatisticModel;
+use App\Models\SettingModel;
 
 class AdminController extends BaseController {
 
@@ -23,6 +24,7 @@ class AdminController extends BaseController {
     private $inventoryModel;
     private $supplierModel;
     private $statisticModel;
+    private $settingModel;
 
     public function __construct() {
         parent::__construct();
@@ -45,6 +47,7 @@ class AdminController extends BaseController {
         $this->inventoryModel = new InventoryModel();
         $this->supplierModel = new SupplierModel();
         $this->statisticModel = new StatisticModel();
+        $this->settingModel = new SettingModel();
     }
 
     /**
@@ -838,7 +841,7 @@ class AdminController extends BaseController {
      * Hiển thị form sửa khách hàng
      */
     public function editUser($id) {
-        // Lấy thông tin user từ Model
+        // 1. Lấy thông tin tài khoản
         $customer = $this->userModel->getUserById($id);
         
         if (!$customer) {
@@ -846,10 +849,15 @@ class AdminController extends BaseController {
             $this->redirect('/admin/users');
         }
 
+        // 2. Lấy danh sách địa chỉ (MỚI THÊM)
+        $addresses = $this->userModel->getUserAddresses($id);
+
+        // 3. Truyền cả 2 biến sang View
         $this->renderView('admin/users/form', [
-            'title' => 'Cập nhật thông tin khách hàng',
+            'title' => 'Chi tiết khách hàng',
             'user' => Auth::user(),
-            'customer' => $customer
+            'customer' => $customer,
+            'addresses' => $addresses // <--- Biến này chứa danh sách địa chỉ
         ]);
     }
 
@@ -950,5 +958,116 @@ class AdminController extends BaseController {
             'chartTitle' => $title,
             'chartData' => $data
         ]);
+    }
+
+    // ======================================================
+    // CÀI ĐẶT HỆ THỐNG (SETTINGS) ADMIN
+    // ======================================================
+
+    public function settings() {
+        $settings = $this->settingModel->getAllSettings();
+
+        $this->renderView('admin/settings/index', [
+            'title' => 'Cài đặt hệ thống',
+            'user' => Auth::user(),
+            'settings' => $settings,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    public function updateSettings() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // 1. Cập nhật các thông tin văn bản
+            $keys = ['site_title', 'site_email', 'site_phone', 'site_address'];
+            
+            foreach ($keys as $key) {
+                if (isset($_POST[$key])) {
+                    $this->settingModel->updateSetting($key, $_POST[$key]);
+                }
+            }
+
+            // 2. Xử lý upload Logo (Nếu có chọn ảnh mới)
+            if (isset($_FILES['site_logo']) && $_FILES['site_logo']['error'] == 0) {
+                $targetDir = __DIR__ . '/../../public/admin_assets/assets/img/';
+                $fileName = 'system_logo.png'; // Đặt tên cố định để ghi đè
+                $targetFile = $targetDir . $fileName;
+
+                if (move_uploaded_file($_FILES['site_logo']['tmp_name'], $targetFile)) {
+                    $this->settingModel->updateSetting('site_logo', $fileName);
+                }
+            }
+
+            $_SESSION['success'] = "Đã lưu cài đặt thành công!";
+            $this->redirect('/admin/settings');
+        }
+    }
+
+    // ======================================================
+    // HỒ SƠ CÁ NHÂN (PROFILE) - ĐÃ CẬP NHẬT
+    // ======================================================
+
+    public function profile() {
+        $id = $_SESSION['user']['ID_TK'];
+        
+        // 1. Lấy thông tin User
+        $user = $this->userModel->getUserById($id);
+        
+        // 2. Lấy TOÀN BỘ danh sách địa chỉ
+        $addresses = $this->userModel->getUserAddresses($id);
+
+        // 3. Lọc ra địa chỉ mặc định để điền vào ô nhập nhanh (giữ tính năng cũ)
+        $defaultAddress = [];
+        foreach ($addresses as $addr) {
+            if ($addr['IS_DEFAULT'] == 1) {
+                $defaultAddress = $addr;
+                break;
+            }
+        }
+
+        $this->renderView('admin/profile/index', [
+            'title' => 'Hồ sơ cá nhân',
+            'user' => Auth::user(),
+            'profile' => $user,
+            'address' => $defaultAddress, // Dùng cho Form nhập nhanh
+            'addresses' => $addresses,    // Dùng cho Bảng danh sách bên dưới
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
+    }
+
+    public function updateProfile() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_SESSION['user']['ID_TK'];
+            $password = $_POST['password'];
+            $dia_chi = $_POST['dia_chi']; // Lấy địa chỉ từ form
+            
+            $data = [
+                'ho_ten' => $_POST['ho_ten'],
+                'email' => $_POST['email'],
+                'sdt' => $_POST['sdt'],
+                'gioi_tinh' => $_POST['gioi_tinh'],
+                'mat_khau' => !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : null
+            ];
+
+            // 1. Cập nhật thông tin tài khoản chính
+            $updateUser = $this->userModel->adminUpdateCustomer($id, $data);
+
+            // 2. Cập nhật địa chỉ (Nếu người dùng có nhập)
+            $updateAddr = true;
+            if (!empty($dia_chi)) {
+                $updateAddr = $this->userModel->updateUserAddress($id, $data['ho_ten'], $data['sdt'], $dia_chi);
+            }
+
+            if ($updateUser && $updateAddr) {
+                $_SESSION['user']['HO_TEN'] = $data['ho_ten']; // Cập nhật session
+                $_SESSION['success'] = "Cập nhật hồ sơ và địa chỉ thành công!";
+            } else {
+                $_SESSION['error'] = "Có lỗi xảy ra khi cập nhật!";
+            }
+            $this->redirect('/admin/profile');
+        }
     }
 }

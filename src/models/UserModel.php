@@ -224,17 +224,46 @@ class UserModel extends BaseModel {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+
+
     /**
-     * Lấy địa chỉ của người dùng (Admin)
+     * Lấy danh sách địa chỉ giao hàng của User (Admin xem)
      */
     public function getUserAddresses($userId) {
-        $stmt = $this->db->prepare("
-            SELECT * FROM dia_chi_giao_hang 
-            WHERE ID_TK = ? 
-            ORDER BY IS_DEFAULT DESC, ID_DIA_CHI DESC
-        ");
+        $sql = "SELECT * FROM dia_chi_giao_hang 
+                WHERE ID_TK = ? 
+                ORDER BY IS_DEFAULT DESC"; // Ưu tiên địa chỉ mặc định lên đầu
+        
+        $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Cập nhật địa chỉ cho User (Trong bảng dia_chi_giao_hang)
+     */
+    public function updateUserAddress($userId, $name, $phone, $addressDetail) {
+        try {
+            // Kiểm tra xem user đã có địa chỉ mặc định chưa
+            $current = $this->getUserAddresses($userId);
+            
+            if ($current) {
+                // Nếu có rồi thì Update
+                $sql = "UPDATE dia_chi_giao_hang 
+                        SET DIA_CHI_CHI_TIET = ?, TEN_NGUOI_NHAN = ?, SDT_GH = ? 
+                        WHERE ID_DIA_CHI = ?";
+                $stmt = $this->db->prepare($sql);
+                return $stmt->execute([$addressDetail, $name, $phone, $current['ID_DIA_CHI']]);
+            } else {
+                // Nếu chưa có thì Insert mới
+                $sql = "INSERT INTO dia_chi_giao_hang (ID_TK, TEN_NGUOI_NHAN, SDT_GH, DIA_CHI_CHI_TIET, IS_DEFAULT) 
+                        VALUES (?, ?, ?, ?, 1)";
+                $stmt = $this->db->prepare($sql);
+                return $stmt->execute([$userId, $name, $phone, $addressDetail]);
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**

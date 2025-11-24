@@ -38,7 +38,7 @@
                                 </p>
                             </li>
                             <li class="user-footer">
-                                <a href="#" class="btn btn-default btn-flat">Hồ sơ</a>
+                                <a href="<?= BASE_PATH ?>/admin/profile" class="btn btn-default btn-flat">Hồ sơ</a>
                                 
                                 <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="btn btn-default btn-flat float-end">
                                     Đăng xuất
