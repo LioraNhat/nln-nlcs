@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th10 24, 2025 lúc 07:42 PM
--- Phiên bản máy phục vụ: 10.4.32-MariaDB
--- Phiên bản PHP: 8.2.12
+-- Host: 127.0.0.1
+-- Generation Time: Dec 08, 2025 at 01:44 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Cơ sở dữ liệu: `nln_nlcs`
+-- Database: `nln_nlcs`
 --
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `binh_luan`
+-- Table structure for table `binh_luan`
 --
 
 CREATE TABLE `binh_luan` (
@@ -38,7 +38,7 @@ CREATE TABLE `binh_luan` (
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `cau_hinh`
+-- Table structure for table `cau_hinh`
 --
 
 CREATE TABLE `cau_hinh` (
@@ -47,7 +47,7 @@ CREATE TABLE `cau_hinh` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `cau_hinh`
+-- Dumping data for table `cau_hinh`
 --
 
 INSERT INTO `cau_hinh` (`meta_key`, `meta_value`) VALUES
@@ -60,7 +60,7 @@ INSERT INTO `cau_hinh` (`meta_key`, `meta_value`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chi_tiet_don_hang`
+-- Table structure for table `chi_tiet_don_hang`
 --
 
 CREATE TABLE `chi_tiet_don_hang` (
@@ -71,7 +71,7 @@ CREATE TABLE `chi_tiet_don_hang` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `chi_tiet_don_hang`
+-- Dumping data for table `chi_tiet_don_hang`
 --
 
 INSERT INTO `chi_tiet_don_hang` (`ID_DH`, `ID_HH`, `SO_LUONG_BAN_RA`, `don_gia_ban`) VALUES
@@ -81,6 +81,8 @@ INSERT INTO `chi_tiet_don_hang` (`ID_DH`, `ID_HH`, `SO_LUONG_BAN_RA`, `don_gia_b
 ('DH0D8', '00006', 4, 0),
 ('DH0D8', '00041', 1, 0),
 ('DH17B', '00008', 1, 0),
+('DH1B3', '00059', 1, 0),
+('DH1B3', '00096', 1, 0),
 ('DH31E', '00003', 1, 0),
 ('DH706', '00004', 3, 0),
 ('DH706', '00008', 2, 0),
@@ -96,13 +98,14 @@ INSERT INTO `chi_tiet_don_hang` (`ID_DH`, `ID_HH`, `SO_LUONG_BAN_RA`, `don_gia_b
 ('DHBCC', '00004', 1, 0),
 ('DHD08', '00001', 1, 0),
 ('DHD45', '00128', 1, 0),
+('DHE42', '00008', 1, 0),
 ('DHF32', '00003', 1, 0),
 ('DHFF3', '00026', 1, 0);
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chi_tiet_gio_hang`
+-- Table structure for table `chi_tiet_gio_hang`
 --
 
 CREATE TABLE `chi_tiet_gio_hang` (
@@ -112,7 +115,7 @@ CREATE TABLE `chi_tiet_gio_hang` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `chi_tiet_gio_hang`
+-- Dumping data for table `chi_tiet_gio_hang`
 --
 
 INSERT INTO `chi_tiet_gio_hang` (`ID_GH`, `ID_HH`, `SO_LUONG_SP`) VALUES
@@ -123,18 +126,19 @@ INSERT INTO `chi_tiet_gio_hang` (`ID_GH`, `ID_HH`, `SO_LUONG_SP`) VALUES
 ('GH444', '00018', 2),
 ('GH444', '00019', 3),
 ('GH444', '00059', 1),
+('GH690', '00002', 1),
+('GH690', '00005', 4),
+('GH690', '00006', 1),
 ('GH97e', '00018', 1),
 ('GH97e', '00030', 1),
 ('GH97e', '00109', 1),
 ('GHab0', '00058', 1),
-('GHab1', '00005', 1),
-('GHcf3', '00059', 1),
-('GHcf3', '00096', 1);
+('GHab1', '00005', 1);
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `chi_tiet_phieu_nhap`
+-- Table structure for table `chi_tiet_phieu_nhap`
 --
 
 CREATE TABLE `chi_tiet_phieu_nhap` (
@@ -145,7 +149,7 @@ CREATE TABLE `chi_tiet_phieu_nhap` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `chi_tiet_phieu_nhap`
+-- Dumping data for table `chi_tiet_phieu_nhap`
 --
 
 INSERT INTO `chi_tiet_phieu_nhap` (`ID_PN`, `ID_HH`, `SO_LUONG_NHAP`, `DON_GIA_NHAP`) VALUES
@@ -155,7 +159,7 @@ INSERT INTO `chi_tiet_phieu_nhap` (`ID_PN`, `ID_HH`, `SO_LUONG_NHAP`, `DON_GIA_N
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `danh_muc`
+-- Table structure for table `danh_muc`
 --
 
 CREATE TABLE `danh_muc` (
@@ -164,7 +168,7 @@ CREATE TABLE `danh_muc` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='1. Th?c ph?m so ch?\r\n2. Rau c? qu?\r\n3. Tr i c y tu';
 
 --
--- Đang đổ dữ liệu cho bảng `danh_muc`
+-- Dumping data for table `danh_muc`
 --
 
 INSERT INTO `danh_muc` (`ID_DM`, `TEN_DM`) VALUES
@@ -176,7 +180,7 @@ INSERT INTO `danh_muc` (`ID_DM`, `TEN_DM`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `dia_chi_giao_hang`
+-- Table structure for table `dia_chi_giao_hang`
 --
 
 CREATE TABLE `dia_chi_giao_hang` (
@@ -195,16 +199,18 @@ CREATE TABLE `dia_chi_giao_hang` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `dia_chi_giao_hang`
+-- Dumping data for table `dia_chi_giao_hang`
 --
 
 INSERT INTO `dia_chi_giao_hang` (`ID_DIA_CHI`, `ID_TK`, `TEN_NGUOI_NHAN`, `SDT_GH`, `ID_TINH_TP`, `TEN_TINH_TP`, `ID_QUAN_HUYEN`, `TEN_QUAN_HUYEN`, `ID_XA_PHUONG`, `TEN_XA_PHUONG`, `DIA_CHI_CHI_TIET`, `IS_DEFAULT`) VALUES
-(67, 'TK690a29dd24ac3', 'tram', '011111', '22', 'Tỉnh Quảng Ninh', '206', 'Thị xã Quảng Yên', '7174', 'Phường Phong Hải', '123', 0);
+(67, 'TK690a29dd24ac3', 'tram', '011111', '22', 'Tỉnh Quảng Ninh', '206', 'Thị xã Quảng Yên', '7174', 'Phường Phong Hải', '123', 0),
+(68, 'TK690a2db982cee', 'dao', '02222', '24', 'Tỉnh Bắc Giang', '217', 'Huyện Lạng Giang', '7429', 'Xã Xuân Hương', '123', 0),
+(69, 'TK690a2d551daad', 'lam', '099', '25', 'Tỉnh Phú Thọ', '238', 'Huyện Thanh Sơn', '8635', 'Xã Khả Cửu', '123', 1);
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `don_hang`
+-- Table structure for table `don_hang`
 --
 
 CREATE TABLE `don_hang` (
@@ -223,7 +229,7 @@ CREATE TABLE `don_hang` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `don_hang`
+-- Dumping data for table `don_hang`
 --
 
 INSERT INTO `don_hang` (`ID_DH`, `ID_PTTT`, `ID_TK`, `DIA_CHI_GIAO_DH`, `NGAY_GIO_TAO_DON`, `NGAY_DU_KIEN_GIAO`, `TONG_GIA_TRI_DH`, `TIEN_GIAM_GIA`, `SO_TIEN_THANH_TOAN`, `TRANG_THAI_THANH_TOAN`, `NGAY_THANH_TOAN`, `TRANG_THAI_BL`) VALUES
@@ -231,6 +237,7 @@ INSERT INTO `don_hang` (`ID_DH`, `ID_PTTT`, `ID_TK`, `DIA_CHI_GIAO_DH`, `NGAY_GI
 ('DH0B5', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:19:23', '2025-11-14', 188000.00, 17800.00, 170200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH0D8', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:29:54', '2025-11-14', 749000.00, 149800.00, 599200.00, 'Đã thanh toán', '2025-11-24 17:09:07', 'Chưa đánh giá'),
 ('DH17B', 'PTTT1', 'TK690a394e5231c', 'aa (0223)\nĐịa chỉ: 123B1, Phường Châu Văn Liêm, Quận Ô Môn, Thành phố Cần Thơ', '2025-11-21 17:40:40', '2025-11-24', 89000.00, 17800.00, 71200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DH1B3', 'PTTT1', 'TK690a2db982cee', 'dao (02222)\nĐịa chỉ: 123, Xã Xuân Hương, Huyện Lạng Giang, Tỉnh Bắc Giang', '2025-11-26 14:24:03', '2025-11-29', 42000.00, 8400.00, 33600.00, 'Đã thanh toán', '2025-11-26 14:25:00', 'Chưa đánh giá'),
 ('DH31E', 'PTTT1', 'TK69187df4a4440', 'capy (0437)\nĐịa chỉ: 123, Phường Yên Thọ, Thành phố Đông Triều, Tỉnh Quảng Ninh', '2025-11-15 22:04:19', '2025-11-18', 89000.00, 0.00, 89000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH706', 'PTTT1', 'TK690a29dd24ac3', 'tram (011111)\nĐịa chỉ: Hẻm 156, Phường Bình Ngọc, Thành phố Móng Cái, Tỉnh Quảng Ninh', '2025-11-15 14:57:14', '2025-11-18', 475000.00, 35600.00, 439400.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH737', 'PTTT1', 'TK690a394e5231c', 'aa (022345)\nĐịa chỉ: 123, Xã Phúc Sơn, Thị xã Nghĩa Lộ, Tỉnh Yên Bái', '2025-11-23 00:25:35', '2025-11-26', 110000.00, 22000.00, 88000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
@@ -238,18 +245,19 @@ INSERT INTO `don_hang` (`ID_DH`, `ID_PTTT`, `ID_TK`, `DIA_CHI_GIAO_DH`, `NGAY_GI
 ('DH7C4', 'PTTT1', 'TK690a394e5231c', 'aa (0223)\nĐịa chỉ: 123B1, Phường Châu Văn Liêm, Quận Ô Môn, Thành phố Cần Thơ', '2025-11-20 22:06:50', '2025-11-23', 89000.00, 0.00, 89000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DH9B2', 'PTTT1', 'TK690a2d551daad', 'lam (099)\nĐịa chỉ: 123, Xã Đoan Bái, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-11 03:16:32', '2025-11-14', 110000.00, 22000.00, 88000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHA4D', 'PTTT1', 'TK69186339d8aab', 'teo (09123)\nĐịa chỉ: 123, Xã Xuân Cẩm, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-15 19:11:17', '2025-11-18', 30000.00, 6000.00, 24000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
-('DHA72', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:13:57', '2025-11-14', 79000.00, 0.00, 79000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
+('DHA72', 'PTTT1', 'TK690a2db982cee', 'hoa (02222)\nĐịa chỉ: 34, Xã Quan Lạn, Huyện Vân Đồn, Tỉnh Quảng Ninh', '2025-11-11 19:13:57', '2025-11-14', 79000.00, 0.00, 79000.00, 'Đã thanh toán', '2025-11-26 14:22:19', 'Chưa đánh giá'),
 ('DHB5A', 'PTTT1', 'TK690a394e5231c', 'aa (0223)\nĐịa chỉ: 123B1, Phường Châu Văn Liêm, Quận Ô Môn, Thành phố Cần Thơ', '2025-11-20 22:07:20', '2025-11-23', 199000.00, 39800.00, 159200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHBCC', 'PTTT1', 'TK690a29dd24ac3', 'tram (011111)\nĐịa chỉ: 123, Xã Liên Hòa, Thị xã Quảng Yên, Tỉnh Quảng Ninh', '2025-11-24 17:53:31', '2025-11-27', 99000.00, 0.00, 99000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHD08', 'PTTT1', 'TK690a2d551daad', 'lam (099)\nĐịa chỉ: 123, Xã Đoan Bái, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-11 03:02:03', '2025-11-14', 89000.00, 17800.00, 71200.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHD45', 'PTTT1', 'TK69186339d8aab', 'teo (09123)\nĐịa chỉ: 123, Xã Xuân Cẩm, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-15 22:22:51', '2025-11-18', 500000.00, 100000.00, 400000.00, 'Đã thanh toán', '2025-11-24 17:06:20', 'Chưa đánh giá'),
+('DHE42', 'PTTT1', 'TK690a29dd24ac3', 'tram (011111)\nĐịa chỉ: 123, Phường Phong Hải, Thị xã Quảng Yên, Tỉnh Quảng Ninh', '2025-12-08 07:37:40', '2025-12-11', 89000.00, 17800.00, 71200.00, 'Đã thanh toán', '2025-12-08 07:39:22', 'Chưa đánh giá'),
 ('DHF32', 'PTTT1', 'TK69187df4a4440', 'capy (0437)\nĐịa chỉ: 123, Phường Yên Thọ, Thành phố Đông Triều, Tỉnh Quảng Ninh', '2025-11-15 22:04:16', '2025-11-18', 89000.00, 0.00, 89000.00, 'Chưa thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá'),
 ('DHFF3', 'PTTT2', 'TK690a2d551daad', 'lam (099)\nĐịa chỉ: 123, Xã Đoan Bái, Huyện Hiệp Hòa, Tỉnh Bắc Giang', '2025-11-11 03:03:21', '2025-11-14', 89000.00, 17800.00, 71200.00, 'Đã thanh toán', '0000-00-00 00:00:00', 'Chưa đánh giá');
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `don_hang_hien_tai`
+-- Table structure for table `don_hang_hien_tai`
 --
 
 CREATE TABLE `don_hang_hien_tai` (
@@ -259,7 +267,7 @@ CREATE TABLE `don_hang_hien_tai` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `don_hang_hien_tai`
+-- Dumping data for table `don_hang_hien_tai`
 --
 
 INSERT INTO `don_hang_hien_tai` (`ID_DH`, `TRANG_THAI_DHHT`, `NGAY_GIO_CAP_NHAT`) VALUES
@@ -267,6 +275,7 @@ INSERT INTO `don_hang_hien_tai` (`ID_DH`, `TRANG_THAI_DHHT`, `NGAY_GIO_CAP_NHAT`
 ('DH0B5', 'Đã hủy', '2025-11-24 17:22:32'),
 ('DH0D8', 'Giao hàng thành công', '2025-11-24 17:09:07'),
 ('DH17B', 'Đã hủy', '2025-11-23 00:08:37'),
+('DH1B3', 'Giao hàng thành công', '2025-11-26 14:25:00'),
 ('DH31E', 'Đã hủy', '2025-11-15 22:11:35'),
 ('DH706', 'Chờ xử lý', '2025-11-15 22:11:18'),
 ('DH737', 'Giao hàng thành công', '2025-11-24 16:51:00'),
@@ -274,18 +283,19 @@ INSERT INTO `don_hang_hien_tai` (`ID_DH`, `TRANG_THAI_DHHT`, `NGAY_GIO_CAP_NHAT`
 ('DH7C4', 'Đã hủy', '2025-11-20 22:07:03'),
 ('DH9B2', 'Chờ xử lý', '2025-11-15 22:11:18'),
 ('DHA4D', 'Chờ xử lý', '2025-11-15 22:11:18'),
-('DHA72', 'Chờ xử lý', '2025-11-15 22:11:18'),
+('DHA72', 'Giao hàng thành công', '2025-11-26 14:22:19'),
 ('DHB5A', 'Đã hủy', '2025-11-21 17:40:29'),
-('DHBCC', 'Chờ xử lý', '2025-11-24 17:53:31'),
+('DHBCC', 'Đã xác nhận', '2025-12-04 00:05:16'),
 ('DHD08', 'Chờ xử lý', '2025-11-15 22:11:18'),
 ('DHD45', 'Giao hàng thành công', '2025-11-24 17:06:20'),
+('DHE42', 'Giao hàng thành công', '2025-12-08 07:39:22'),
 ('DHF32', 'Đã hủy', '2025-11-15 22:19:43'),
 ('DHFF3', 'Chờ xử lý', '2025-11-15 22:11:18');
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `dvt`
+-- Table structure for table `dvt`
 --
 
 CREATE TABLE `dvt` (
@@ -294,7 +304,7 @@ CREATE TABLE `dvt` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `dvt`
+-- Dumping data for table `dvt`
 --
 
 INSERT INTO `dvt` (`ID_DVT`, `DVT`) VALUES
@@ -305,7 +315,7 @@ INSERT INTO `dvt` (`ID_DVT`, `DVT`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `gia_ban_hien_tai`
+-- Table structure for table `gia_ban_hien_tai`
 --
 
 CREATE TABLE `gia_ban_hien_tai` (
@@ -315,7 +325,7 @@ CREATE TABLE `gia_ban_hien_tai` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `gia_ban_hien_tai`
+-- Dumping data for table `gia_ban_hien_tai`
 --
 
 INSERT INTO `gia_ban_hien_tai` (`ID_HH`, `ID_TD`, `GIA_HIEN_TAI`) VALUES
@@ -450,7 +460,7 @@ INSERT INTO `gia_ban_hien_tai` (`ID_HH`, `ID_TD`, `GIA_HIEN_TAI`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `gio_hang`
+-- Table structure for table `gio_hang`
 --
 
 CREATE TABLE `gio_hang` (
@@ -461,7 +471,7 @@ CREATE TABLE `gio_hang` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `gio_hang`
+-- Dumping data for table `gio_hang`
 --
 
 INSERT INTO `gio_hang` (`ID_GH`, `ID_TK`, `NGAY_TAO_GH`, `NGAY_CAP_NHAT_GH`) VALUES
@@ -480,7 +490,7 @@ INSERT INTO `gio_hang` (`ID_GH`, `ID_TK`, `NGAY_TAO_GH`, `NGAY_CAP_NHAT_GH`) VAL
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `hang_hoa`
+-- Table structure for table `hang_hoa`
 --
 
 CREATE TABLE `hang_hoa` (
@@ -498,7 +508,7 @@ CREATE TABLE `hang_hoa` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT=' u?c Ph p B n _   NG n?u hi?n th? tr n web, SAI n?u l  h ng ';
 
 --
--- Đang đổ dữ liệu cho bảng `hang_hoa`
+-- Dumping data for table `hang_hoa`
 --
 
 INSERT INTO `hang_hoa` (`ID_HH`, `ID_LHH`, `ID_DVT`, `ID_KM`, `TEN_HH`, `link_anh`, `MO_TA_HH`, `SO_LUONG_TON_HH`, `DUOC_PHEP_BAN`, `LA_HANG_SX`, `HSD`) VALUES
@@ -633,7 +643,7 @@ INSERT INTO `hang_hoa` (`ID_HH`, `ID_LHH`, `ID_DVT`, `ID_KM`, `TEN_HH`, `link_an
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `khuyen_mai`
+-- Table structure for table `khuyen_mai`
 --
 
 CREATE TABLE `khuyen_mai` (
@@ -646,19 +656,20 @@ CREATE TABLE `khuyen_mai` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `khuyen_mai`
+-- Dumping data for table `khuyen_mai`
 --
 
 INSERT INTO `khuyen_mai` (`ID_KM`, `TEN_KM`, `PHAN_TRAM_KM`, `NGAY_BD_KM`, `NGAY_KT_KM`, `TRANG_THAI_KM`) VALUES
 ('KM002', 'Giảm giá cuối tuần (Hải sản)', 10.00, '2025-10-24 00:00:00', '2025-10-26 23:59:59', 'Đã kết thúc'),
 ('KM003', 'Ưu đãi đặc biệt', 20.00, '2025-11-01 00:00:00', '2026-01-31 08:52:08', 'Đang diễn ra'),
 ('KM004', 'Tuần lễ Vàng (Rau củ)', 12.00, '2025-11-23 00:00:00', '2025-11-30 23:59:00', 'Sắp diễn ra'),
-('KM005', 'Flash Sale (Trái cây)', 25.00, '2025-10-25 10:00:00', '2025-10-25 14:00:00', 'Sắp diễn ra');
+('KM005', 'Flash Sale (Trái cây)', 25.00, '2025-10-25 10:00:00', '2025-10-25 14:00:00', 'Sắp diễn ra'),
+('KM006', 'Giảm 10% toàn ngành hàng', 10.00, '2025-11-25 06:04:00', '2025-12-26 08:50:00', 'Đang diễn ra');
 
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `loai_hang_hoa`
+-- Table structure for table `loai_hang_hoa`
 --
 
 CREATE TABLE `loai_hang_hoa` (
@@ -668,7 +679,7 @@ CREATE TABLE `loai_hang_hoa` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='1.M n m?n, Canh x o, Chi n, Nu?ng, Tr ng mi?ng\r\n2. Rau ';
 
 --
--- Đang đổ dữ liệu cho bảng `loai_hang_hoa`
+-- Dumping data for table `loai_hang_hoa`
 --
 
 INSERT INTO `loai_hang_hoa` (`ID_LHH`, `ID_DM`, `TEN_LHH`) VALUES
@@ -685,7 +696,7 @@ INSERT INTO `loai_hang_hoa` (`ID_LHH`, `ID_DM`, `TEN_LHH`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `nguoi_dung`
+-- Table structure for table `nguoi_dung`
 --
 
 CREATE TABLE `nguoi_dung` (
@@ -694,7 +705,7 @@ CREATE TABLE `nguoi_dung` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `nguoi_dung`
+-- Dumping data for table `nguoi_dung`
 --
 
 INSERT INTO `nguoi_dung` (`ID_ND`, `PHAN_QUYEN_TK`) VALUES
@@ -704,7 +715,7 @@ INSERT INTO `nguoi_dung` (`ID_ND`, `PHAN_QUYEN_TK`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `nha_cung_cap`
+-- Table structure for table `nha_cung_cap`
 --
 
 CREATE TABLE `nha_cung_cap` (
@@ -716,7 +727,7 @@ CREATE TABLE `nha_cung_cap` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `nha_cung_cap`
+-- Dumping data for table `nha_cung_cap`
 --
 
 INSERT INTO `nha_cung_cap` (`ID_NCC`, `TEN_NCC`, `DIA_CHI_NCC`, `SDT_NCC`, `EMAIL_NCC`) VALUES
@@ -729,7 +740,7 @@ INSERT INTO `nha_cung_cap` (`ID_NCC`, `TEN_NCC`, `DIA_CHI_NCC`, `SDT_NCC`, `EMAI
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `phieu_nhap`
+-- Table structure for table `phieu_nhap`
 --
 
 CREATE TABLE `phieu_nhap` (
@@ -743,7 +754,7 @@ CREATE TABLE `phieu_nhap` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `phieu_nhap`
+-- Dumping data for table `phieu_nhap`
 --
 
 INSERT INTO `phieu_nhap` (`ID_PN`, `ID_NCC`, `NGAY_LAP_PHIEU_NHAP`, `TONG_TIEN_NHAP`, `VAT`, `TONG_GIA_TRI_PHIEU_NHAP`, `CHUNG_TU_GOC`) VALUES
@@ -752,7 +763,7 @@ INSERT INTO `phieu_nhap` (`ID_PN`, `ID_NCC`, `NGAY_LAP_PHIEU_NHAP`, `TONG_TIEN_N
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `phuong_thuc_thanh_toan`
+-- Table structure for table `phuong_thuc_thanh_toan`
 --
 
 CREATE TABLE `phuong_thuc_thanh_toan` (
@@ -761,7 +772,7 @@ CREATE TABLE `phuong_thuc_thanh_toan` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `phuong_thuc_thanh_toan`
+-- Dumping data for table `phuong_thuc_thanh_toan`
 --
 
 INSERT INTO `phuong_thuc_thanh_toan` (`ID_PTTT`, `TEN_PTTT`) VALUES
@@ -772,7 +783,7 @@ INSERT INTO `phuong_thuc_thanh_toan` (`ID_PTTT`, `TEN_PTTT`) VALUES
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `tai_khoan`
+-- Table structure for table `tai_khoan`
 --
 
 CREATE TABLE `tai_khoan` (
@@ -790,13 +801,13 @@ CREATE TABLE `tai_khoan` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `tai_khoan`
+-- Dumping data for table `tai_khoan`
 --
 
 INSERT INTO `tai_khoan` (`ID_TK`, `ID_GH`, `ID_ND`, `HO_TEN`, `GIOI_TINH`, `SDT_TK`, `EMAIL`, `MAT_KHAU`, `NGAY_GIO_TAO_TK`, `NGAY_GIO_CAP_NHAT`, `DIA_CHI_AVT`) VALUES
 ('TK690a29dd24ac3', 'GH690', 'AD', 'tram', 'Nam', '011111', 'tram@gmail.com', '$2y$10$9vLulYFgTnk839eWCr90BeDVRbBReDIJx16gRmS2GL75OqBZoTJm6', '2025-11-04 23:29:17', '2025-11-25 01:14:24', NULL),
-('TK690a2d551daad', 'GHab0', 'KH', 'lam', 'Nữ', '099', 'lam@gmail.com', '$2y$10$5bQuBHHhW2OqtbHjT7dvZewvj5tryRVKbQs2GLeNH/E407MebgiCy', '2025-11-04 23:44:05', '2025-11-04 23:44:05', NULL),
-('TK690a2db982cee', 'GHcf3', 'KH', 'dao', 'Nam', '02222', 'dao@gmail.com', '$2y$10$A7MpPzNNeT2Dd6pujlS89.vdAMcECW8VRo/mjG59eGcOX1.E0g/hi', '2025-11-04 23:45:45', '2025-11-24 17:39:09', NULL),
+('TK690a2d551daad', 'GHab0', 'AD', 'lam', 'Nữ', '099', 'lam@gmail.com', '$2y$10$5bQuBHHhW2OqtbHjT7dvZewvj5tryRVKbQs2GLeNH/E407MebgiCy', '2025-11-04 23:44:05', '2025-11-04 23:44:05', NULL),
+('TK690a2db982cee', 'GHcf3', 'KH', 'dao', 'Nam', '02222', 'dao@gmail.com', '$2y$10$vwpmCroA2mLg7kau8rPEseI99VO99/.cVbG9dYHHjxtF2whCm1qIa', '2025-11-04 23:45:45', '2025-11-25 01:58:16', NULL),
 ('TK690a394e5231c', 'GH31f', 'KH', 'aaa', 'Nữ', '0223456', 'a@gmail.com', '$2y$10$u0v0RgcZ5WmhMjKFuRWMP.WehS9PLWgHpIX8JPEkuIUzV064FOdhm', '2025-11-05 00:35:10', '2025-11-23 00:43:24', NULL),
 ('TK690b6bf878a2b', 'GHa2e', 'KH', 'hoa', 'Nam', '0234', 'hoa@gmail.com', '$2y$10$1KX1OMj05MNT0DzzAxyPnuy0OECH486Sf/T8cnhY1CYomdDPoZNoa', '2025-11-05 22:23:36', '2025-11-05 22:23:36', NULL),
 ('TK6912f22e29d58', 'GH691', 'KH', 'Sơn Tùng MTP', 'Nữ', '09999', 'mtp@gmail.com', '$2y$10$UI5MN3fT2LVQy7aP9z7PWeg1FELFFv0TkPMma0zot4h5W4Rb9vBBO', '2025-11-11 15:22:06', '2025-11-11 15:22:06', NULL),
@@ -809,7 +820,7 @@ INSERT INTO `tai_khoan` (`ID_TK`, `ID_GH`, `ID_ND`, `HO_TEN`, `GIOI_TINH`, `SDT_
 -- --------------------------------------------------------
 
 --
--- Cấu trúc bảng cho bảng `thoi_diem`
+-- Table structure for table `thoi_diem`
 --
 
 CREATE TABLE `thoi_diem` (
@@ -819,7 +830,7 @@ CREATE TABLE `thoi_diem` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Đang đổ dữ liệu cho bảng `thoi_diem`
+-- Dumping data for table `thoi_diem`
 --
 
 INSERT INTO `thoi_diem` (`ID_TD`, `NGAY_BD_GIA_BAN`, `NGAY_KT_GIA_BAN`) VALUES
@@ -829,58 +840,58 @@ INSERT INTO `thoi_diem` (`ID_TD`, `NGAY_BD_GIA_BAN`, `NGAY_KT_GIA_BAN`) VALUES
 ('TD004', '2026-01-02 00:00:00', '2026-01-31 00:00:00');
 
 --
--- Chỉ mục cho các bảng đã đổ
+-- Indexes for dumped tables
 --
 
 --
--- Chỉ mục cho bảng `binh_luan`
+-- Indexes for table `binh_luan`
 --
 ALTER TABLE `binh_luan`
   ADD PRIMARY KEY (`ID_HH`,`ID_BL`),
   ADD KEY `FK_BINH_LUAN_TK_BL_TAI_KHOA` (`ID_TK`);
 
 --
--- Chỉ mục cho bảng `cau_hinh`
+-- Indexes for table `cau_hinh`
 --
 ALTER TABLE `cau_hinh`
   ADD PRIMARY KEY (`meta_key`);
 
 --
--- Chỉ mục cho bảng `chi_tiet_don_hang`
+-- Indexes for table `chi_tiet_don_hang`
 --
 ALTER TABLE `chi_tiet_don_hang`
   ADD PRIMARY KEY (`ID_DH`,`ID_HH`),
   ADD KEY `FK_CHI_TIET_CTDH_HH_HANG_HOA` (`ID_HH`);
 
 --
--- Chỉ mục cho bảng `chi_tiet_gio_hang`
+-- Indexes for table `chi_tiet_gio_hang`
 --
 ALTER TABLE `chi_tiet_gio_hang`
   ADD PRIMARY KEY (`ID_GH`,`ID_HH`),
   ADD KEY `FK_CHI_TIET_CTGH_HH_HANG_HOA` (`ID_HH`);
 
 --
--- Chỉ mục cho bảng `chi_tiet_phieu_nhap`
+-- Indexes for table `chi_tiet_phieu_nhap`
 --
 ALTER TABLE `chi_tiet_phieu_nhap`
   ADD PRIMARY KEY (`ID_PN`,`ID_HH`),
   ADD KEY `FK_CHI_TIET_CTPN_HH_HANG_HOA` (`ID_HH`);
 
 --
--- Chỉ mục cho bảng `danh_muc`
+-- Indexes for table `danh_muc`
 --
 ALTER TABLE `danh_muc`
   ADD PRIMARY KEY (`ID_DM`);
 
 --
--- Chỉ mục cho bảng `dia_chi_giao_hang`
+-- Indexes for table `dia_chi_giao_hang`
 --
 ALTER TABLE `dia_chi_giao_hang`
   ADD PRIMARY KEY (`ID_DIA_CHI`),
   ADD KEY `FK_DIA_CHI_TAI_KHOAN` (`ID_TK`);
 
 --
--- Chỉ mục cho bảng `don_hang`
+-- Indexes for table `don_hang`
 --
 ALTER TABLE `don_hang`
   ADD PRIMARY KEY (`ID_DH`),
@@ -888,33 +899,33 @@ ALTER TABLE `don_hang`
   ADD KEY `FK_DON_HANG_TK_DH_TAI_KHOA` (`ID_TK`);
 
 --
--- Chỉ mục cho bảng `don_hang_hien_tai`
+-- Indexes for table `don_hang_hien_tai`
 --
 ALTER TABLE `don_hang_hien_tai`
   ADD PRIMARY KEY (`ID_DH`);
 
 --
--- Chỉ mục cho bảng `dvt`
+-- Indexes for table `dvt`
 --
 ALTER TABLE `dvt`
   ADD PRIMARY KEY (`ID_DVT`);
 
 --
--- Chỉ mục cho bảng `gia_ban_hien_tai`
+-- Indexes for table `gia_ban_hien_tai`
 --
 ALTER TABLE `gia_ban_hien_tai`
   ADD PRIMARY KEY (`ID_HH`,`ID_TD`),
   ADD KEY `FK_GIA_BAN__TD_GBHT_THOI_DIE` (`ID_TD`);
 
 --
--- Chỉ mục cho bảng `gio_hang`
+-- Indexes for table `gio_hang`
 --
 ALTER TABLE `gio_hang`
   ADD PRIMARY KEY (`ID_GH`),
   ADD KEY `FK_GIO_HANG_GH_TK2_TAI_KHOA` (`ID_TK`);
 
 --
--- Chỉ mục cho bảng `hang_hoa`
+-- Indexes for table `hang_hoa`
 --
 ALTER TABLE `hang_hoa`
   ADD PRIMARY KEY (`ID_HH`),
@@ -923,45 +934,45 @@ ALTER TABLE `hang_hoa`
   ADD KEY `FK_HANG_HOA_HH_LHH_LOAI_HAN` (`ID_LHH`);
 
 --
--- Chỉ mục cho bảng `khuyen_mai`
+-- Indexes for table `khuyen_mai`
 --
 ALTER TABLE `khuyen_mai`
   ADD PRIMARY KEY (`ID_KM`);
 
 --
--- Chỉ mục cho bảng `loai_hang_hoa`
+-- Indexes for table `loai_hang_hoa`
 --
 ALTER TABLE `loai_hang_hoa`
   ADD PRIMARY KEY (`ID_LHH`),
   ADD KEY `FK_LOAI_HAN_LSP_DM_DANH_MUC` (`ID_DM`);
 
 --
--- Chỉ mục cho bảng `nguoi_dung`
+-- Indexes for table `nguoi_dung`
 --
 ALTER TABLE `nguoi_dung`
   ADD PRIMARY KEY (`ID_ND`);
 
 --
--- Chỉ mục cho bảng `nha_cung_cap`
+-- Indexes for table `nha_cung_cap`
 --
 ALTER TABLE `nha_cung_cap`
   ADD PRIMARY KEY (`ID_NCC`);
 
 --
--- Chỉ mục cho bảng `phieu_nhap`
+-- Indexes for table `phieu_nhap`
 --
 ALTER TABLE `phieu_nhap`
   ADD PRIMARY KEY (`ID_PN`),
   ADD KEY `FK_PHIEU_NH_PN_NCC_NHA_CUNG` (`ID_NCC`);
 
 --
--- Chỉ mục cho bảng `phuong_thuc_thanh_toan`
+-- Indexes for table `phuong_thuc_thanh_toan`
 --
 ALTER TABLE `phuong_thuc_thanh_toan`
   ADD PRIMARY KEY (`ID_PTTT`);
 
 --
--- Chỉ mục cho bảng `tai_khoan`
+-- Indexes for table `tai_khoan`
 --
 ALTER TABLE `tai_khoan`
   ADD PRIMARY KEY (`ID_TK`),
@@ -969,81 +980,81 @@ ALTER TABLE `tai_khoan`
   ADD KEY `FK_TAI_KHOA_GH_TK_GIO_HANG` (`ID_GH`);
 
 --
--- Chỉ mục cho bảng `thoi_diem`
+-- Indexes for table `thoi_diem`
 --
 ALTER TABLE `thoi_diem`
   ADD PRIMARY KEY (`ID_TD`);
 
 --
--- AUTO_INCREMENT cho các bảng đã đổ
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT cho bảng `dia_chi_giao_hang`
+-- AUTO_INCREMENT for table `dia_chi_giao_hang`
 --
 ALTER TABLE `dia_chi_giao_hang`
-  MODIFY `ID_DIA_CHI` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `ID_DIA_CHI` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
 
 --
--- Các ràng buộc cho các bảng đã đổ
+-- Constraints for dumped tables
 --
 
 --
--- Các ràng buộc cho bảng `binh_luan`
+-- Constraints for table `binh_luan`
 --
 ALTER TABLE `binh_luan`
   ADD CONSTRAINT `FK_BINH_LUAN_HH_BL_HANG_HOA` FOREIGN KEY (`ID_HH`) REFERENCES `hang_hoa` (`ID_HH`),
   ADD CONSTRAINT `FK_BINH_LUAN_TK_BL_TAI_KHOA` FOREIGN KEY (`ID_TK`) REFERENCES `tai_khoan` (`ID_TK`);
 
 --
--- Các ràng buộc cho bảng `chi_tiet_don_hang`
+-- Constraints for table `chi_tiet_don_hang`
 --
 ALTER TABLE `chi_tiet_don_hang`
   ADD CONSTRAINT `FK_CHI_TIET_CTDH_DH_DON_HANG` FOREIGN KEY (`ID_DH`) REFERENCES `don_hang` (`ID_DH`),
   ADD CONSTRAINT `FK_CHI_TIET_CTDH_HH_HANG_HOA` FOREIGN KEY (`ID_HH`) REFERENCES `hang_hoa` (`ID_HH`);
 
 --
--- Các ràng buộc cho bảng `chi_tiet_gio_hang`
+-- Constraints for table `chi_tiet_gio_hang`
 --
 ALTER TABLE `chi_tiet_gio_hang`
   ADD CONSTRAINT `FK_CHI_TIET_CTGH_GH_GIO_HANG` FOREIGN KEY (`ID_GH`) REFERENCES `gio_hang` (`ID_GH`),
   ADD CONSTRAINT `FK_CHI_TIET_CTGH_HH_HANG_HOA` FOREIGN KEY (`ID_HH`) REFERENCES `hang_hoa` (`ID_HH`);
 
 --
--- Các ràng buộc cho bảng `chi_tiet_phieu_nhap`
+-- Constraints for table `chi_tiet_phieu_nhap`
 --
 ALTER TABLE `chi_tiet_phieu_nhap`
   ADD CONSTRAINT `FK_CHI_TIET_CTPN_HH_HANG_HOA` FOREIGN KEY (`ID_HH`) REFERENCES `hang_hoa` (`ID_HH`),
   ADD CONSTRAINT `FK_CHI_TIET_CTPN_PN_PHIEU_NH` FOREIGN KEY (`ID_PN`) REFERENCES `phieu_nhap` (`ID_PN`);
 
 --
--- Các ràng buộc cho bảng `dia_chi_giao_hang`
+-- Constraints for table `dia_chi_giao_hang`
 --
 ALTER TABLE `dia_chi_giao_hang`
   ADD CONSTRAINT `FK_DIA_CHI_TAI_KHOAN` FOREIGN KEY (`ID_TK`) REFERENCES `tai_khoan` (`ID_TK`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Các ràng buộc cho bảng `don_hang`
+-- Constraints for table `don_hang`
 --
 ALTER TABLE `don_hang`
   ADD CONSTRAINT `FK_DON_HANG_DH_PTTT_PHUONG_T` FOREIGN KEY (`ID_PTTT`) REFERENCES `phuong_thuc_thanh_toan` (`ID_PTTT`),
   ADD CONSTRAINT `FK_DON_HANG_TK_DH_TAI_KHOA` FOREIGN KEY (`ID_TK`) REFERENCES `tai_khoan` (`ID_TK`);
 
 --
--- Các ràng buộc cho bảng `don_hang_hien_tai`
+-- Constraints for table `don_hang_hien_tai`
 --
 ALTER TABLE `don_hang_hien_tai`
   ADD CONSTRAINT `FK_DHHT_TO_DH` FOREIGN KEY (`ID_DH`) REFERENCES `don_hang` (`ID_DH`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
--- Các ràng buộc cho bảng `gia_ban_hien_tai`
+-- Constraints for table `gia_ban_hien_tai`
 --
 ALTER TABLE `gia_ban_hien_tai`
   ADD CONSTRAINT `FK_GIA_BAN__GBHT_HH_HANG_HOA` FOREIGN KEY (`ID_HH`) REFERENCES `hang_hoa` (`ID_HH`),
   ADD CONSTRAINT `FK_GIA_BAN__TD_GBHT_THOI_DIE` FOREIGN KEY (`ID_TD`) REFERENCES `thoi_diem` (`ID_TD`);
 
 --
--- Các ràng buộc cho bảng `hang_hoa`
+-- Constraints for table `hang_hoa`
 --
 ALTER TABLE `hang_hoa`
   ADD CONSTRAINT `FK_HANG_HOA_HH_DVT_DVT` FOREIGN KEY (`ID_DVT`) REFERENCES `dvt` (`ID_DVT`),
@@ -1051,19 +1062,19 @@ ALTER TABLE `hang_hoa`
   ADD CONSTRAINT `FK_HANG_HOA_HH_LHH_LOAI_HAN` FOREIGN KEY (`ID_LHH`) REFERENCES `loai_hang_hoa` (`ID_LHH`);
 
 --
--- Các ràng buộc cho bảng `loai_hang_hoa`
+-- Constraints for table `loai_hang_hoa`
 --
 ALTER TABLE `loai_hang_hoa`
   ADD CONSTRAINT `FK_LOAI_HAN_LSP_DM_DANH_MUC` FOREIGN KEY (`ID_DM`) REFERENCES `danh_muc` (`ID_DM`);
 
 --
--- Các ràng buộc cho bảng `phieu_nhap`
+-- Constraints for table `phieu_nhap`
 --
 ALTER TABLE `phieu_nhap`
   ADD CONSTRAINT `FK_PHIEU_NH_PN_NCC_NHA_CUNG` FOREIGN KEY (`ID_NCC`) REFERENCES `nha_cung_cap` (`ID_NCC`);
 
 --
--- Các ràng buộc cho bảng `tai_khoan`
+-- Constraints for table `tai_khoan`
 --
 ALTER TABLE `tai_khoan`
   ADD CONSTRAINT `FK_TAI_KHOA_TK_ND_NGUOI_DU` FOREIGN KEY (`ID_ND`) REFERENCES `nguoi_dung` (`ID_ND`);
