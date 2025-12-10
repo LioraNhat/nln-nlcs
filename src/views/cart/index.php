@@ -91,7 +91,7 @@ require_once __DIR__ . '/../partials/header.php';
                                     </td>
                                     
                                     <td class="cart-item-remove">
-                                        <a href="<?php echo BASE_PATH; ?>/cart/remove/<?php echo $item['id']; ?>" class="btn-remove btn-remove-item">X</a>
+                                        <a href="<?php echo BASE_PATH; ?>/cart/remove/<?php echo $item['id']; ?>" class="btn-remove">X</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

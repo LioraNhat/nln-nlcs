@@ -116,26 +116,20 @@ class AdminController extends BaseController {
 
     public function users() {
         $search = $_GET['search'] ?? '';
-        
-        // --- PHẦN 1: KHÁCH HÀNG (Phân trang như cũ) ---
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $limit = 10; // Giảm xuống 10 để giao diện đỡ dài
+        $limit = 10;
         $offset = ($page - 1) * $limit;
-
-        // Gọi hàm mới getUsersByRole với tham số 'KH'
         $customers = $this->userModel->getUsersByRole('KH', $search, $limit, $offset);
         $totalCustomers = $this->userModel->countUsersByRole('KH', $search);
         $totalPages = ceil($totalCustomers / $limit);
 
-        // --- PHẦN 2: QUẢN TRỊ VIÊN (Lấy hết hoặc limit nhiều hơn) ---
-        // Gọi hàm mới getUsersByRole với tham số 'AD'
         $admins = $this->userModel->getUsersByRole('AD', $search, 50, 0);
 
         $this->renderView('admin/users/index', [
             'title' => 'Quản lý Người dùng',
             'user' => Auth::user(),
-            'customers' => $customers, // Danh sách khách
-            'admins' => $admins,       // Danh sách admin
+            'customers' => $customers,
+            'admins' => $admins,
             'totalPages' => $totalPages,
             'currentPage' => $page,
             'searchKeyword' => $search,
@@ -225,71 +219,59 @@ class AdminController extends BaseController {
         ]);
     }
 
-    // Thêm ảnh và mã ảnh là id
     public function storeProduct() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // 1. Xác định ID (Mã sản phẩm)
+            // 1. Xác định ID
             $id = $_POST['id'] ?? '';
-            $isUpdate = !empty($id); // Biến cờ để biết đang sửa hay thêm
+            $isUpdate = !empty($id);
 
             if (!$isUpdate) {
-                // Nếu là Thêm mới: Tự sinh ID ngay tại đây để dùng đặt tên ảnh
-                $id = $this->productModel->generateProductId();
+                $id = $this->productModel->generateNewId(); // Dùng hàm sinh ID mới trong Model
             }
 
-            // 2. Xử lý Ảnh
-            // Mặc định lấy ảnh cũ (nếu đang sửa) hoặc rỗng
+            // 2. Xử lý Ảnh (Giữ nguyên logic cũ của bạn)
             $link_anh = $_POST['old_img'] ?? ''; 
-
             if (isset($_FILES['img']) && $_FILES['img']['error'] == 0) {
                 $targetDir = __DIR__ . '/../../public/uploads/';
-                
-                // QUAN TRỌNG: Đặt tên ảnh = Mã sản phẩm + .png
                 $fileName = $id . '.png';
                 $targetFile = $targetDir . $fileName;
-                
-                // Di chuyển file upload vào thư mục
-                // Lưu ý: Hàm này chỉ đổi tên đuôi file, không convert định dạng ảnh.
-                // (Trình duyệt vẫn hiển thị được dù file gốc là jpg nhưng tên là png)
                 if (move_uploaded_file($_FILES['img']['tmp_name'], $targetFile)) {
                     $link_anh = $fileName;
                 }
             }
 
-            // 3. Gom dữ liệu để lưu
+            // 3. LẤY GIÁ BÁN RIÊNG (Quan trọng)
+            $gia_ban = $_POST['gia_ban'] ?? 0;
+
+            // 4. Gom dữ liệu bảng HÀNG HÓA (Lưu ý: Đã xóa 'gia_ban' khỏi mảng này)
             $data = [
-                'id_hh' => $id, // Truyền ID vào (Quan trọng cho hàm create)
+                'id_hh' => $id,
                 'ten_hh' => $_POST['ten_hh'],
                 'id_lhh' => $_POST['id_lhh'],
                 'id_dvt' => $_POST['id_dvt'],
-                'gia_ban' => $_POST['gia_ban'],
+                // 'gia_ban' => ...  <-- ĐÃ XÓA DÒNG NÀY ĐỂ TRÁNH LỖI SQL
                 'so_luong_ton' => $_POST['so_luong_ton'],
                 'id_km' => !empty($_POST['id_km']) ? $_POST['id_km'] : null,
                 'mo_ta_hh' => $_POST['mo_ta_hh'],
                 'hsd' => $_POST['hsd'],
                 'duoc_phep_ban' => isset($_POST['duoc_phep_ban']) ? 1 : 0,
-                'link_anh' => $link_anh
+                'link_anh' => $link_anh,
+                'la_hang_sx' => 1 // Mặc định là hàng sx
             ];
 
-            // 4. Gọi Model lưu dữ liệu
+            // 5. GỌI MODEL XỬ LÝ (SỬA ĐOẠN NÀY)
             if ($isUpdate) {
-                // Cập nhật
-                // Lưu ý: Hàm updateProduct trong Model cần hỗ trợ nhận array $data
-                $result = $this->productModel->updateProduct($id, $data);
+                $this->productModel->updateProduct($id, $data);
+                $this->productModel->updatePrice($id, $gia_ban);
+                
                 $msg = "Cập nhật";
             } else {
-                // Thêm mới (Cần đảm bảo hàm createProduct trong Model nhận ID từ $data['id_hh'])
-                $result = $this->productModel->createProduct($data);
+                $this->productModel->createProduct($data);
+                $this->productModel->insertPrice($id, $gia_ban);
                 $msg = "Thêm mới";
             }
 
-            if ($result) {
-                $_SESSION['success'] = "$msg sản phẩm thành công! (Mã: $id)";
-            } else {
-                $_SESSION['error'] = "Có lỗi xảy ra khi $msg sản phẩm.";
-            }
-
-            // 5. Quay lại danh sách
+            $_SESSION['success'] = "$msg sản phẩm thành công! (Mã: $id)";
             $base = defined('BASE_PATH') ? BASE_PATH : '/NLN_NLCS/public';
             header('Location: ' . $base . '/admin/products');
             exit;
@@ -493,9 +475,9 @@ class AdminController extends BaseController {
 
     public function promotions() {
         $search = $_GET['search'] ?? '';
-
         $promotions = $this->promotionModel->getAllPromotions($search);
         
+        date_default_timezone_set('Asia/Ho_Chi_Minh');
         $today = date('Y-m-d H:i:s');
         foreach ($promotions as $km) {
             $status = $km['TRANG_THAI_KM'];
@@ -507,8 +489,6 @@ class AdminController extends BaseController {
                 elseif ($today > $km['NGAY_KT_KM']) $newStatus = 'Đã kết thúc';
                 
                 if ($newStatus !== $status) {
-                    // Gọi model cập nhật lại status (nếu cần thiết, hoặc chỉ hiển thị)
-                    // Ở đây tôi cập nhật vào mảng hiển thị cho đúng thực tế
                     $km['TRANG_THAI_KM'] = $newStatus;
                     // Nếu muốn lưu vào DB luôn thì gọi hàm updateStatus ở Model
                 }
@@ -525,13 +505,17 @@ class AdminController extends BaseController {
         ]);
         unset($_SESSION['success'], $_SESSION['error']);
     }
+    public function createPromotion() { 
+        // 1. Lấy danh sách loại hàng để hiển thị dropdown (cho tính năng áp dụng hàng loạt)
+        $loai_hang = $this->productModel->getAllLoaiHang(); 
 
-    public function createPromotion() {
+        // 2. Gọi View
         $this->renderView('admin/promotions/form', [
             'title' => 'Thêm khuyến mãi',
             'user' => Auth::user(),
             'isEdit' => false,
-            'promotion' => []
+            'promotion' => [],
+            'loai_hang' => $loai_hang
         ]);
     }
 
@@ -541,11 +525,17 @@ class AdminController extends BaseController {
             $_SESSION['error'] = "Không tìm thấy khuyến mãi!";
             $this->redirect('/admin/promotions');
         }
+
+        // 1. Lấy danh sách loại hàng
+        $loai_hang = $this->productModel->getAllLoaiHang();
+
+        // 2. Truyền sang View
         $this->renderView('admin/promotions/form', [
             'title' => 'Cập nhật khuyến mãi',
             'user' => Auth::user(),
             'isEdit' => true,
-            'promotion' => $promotion
+            'promotion' => $promotion,
+            'loai_hang' => $loai_hang // <--- QUAN TRỌNG: Bổ sung dòng này
         ]);
     }
 
@@ -553,16 +543,18 @@ class AdminController extends BaseController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['id'] ?? '';
             
-            // Tự động tính trạng thái dựa trên ngày
-            $start = $_POST['ngay_bd'];
-            $end = $_POST['ngay_kt'];
+            // Xử lý ngày tháng: Thay thế 'T' thành khoảng trắng để đúng chuẩn MySQL
+            $start = str_replace('T', ' ', $_POST['ngay_bd']);
+            $end = str_replace('T', ' ', $_POST['ngay_kt']);
+            
+            date_default_timezone_set('Asia/Ho_Chi_Minh');
             $today = date('Y-m-d H:i:s');
             
+            // Tính trạng thái
             $status = 'Sắp diễn ra';
             if ($today >= $start && $today <= $end) $status = 'Đang diễn ra';
             if ($today > $end) $status = 'Đã kết thúc';
             
-            // Nếu người dùng chọn "Đã hủy" thủ công thì ưu tiên
             if (isset($_POST['trang_thai']) && $_POST['trang_thai'] === 'Đã hủy') {
                 $status = 'Đã hủy';
             }
@@ -575,19 +567,34 @@ class AdminController extends BaseController {
                 'trang_thai' => $status
             ];
 
+            // --- QUAN TRỌNG: LOGIC LƯU VÀ LẤY ID ---
             if ($id) {
+                // Cập nhật
                 $result = $this->promotionModel->updatePromotion($id, $data);
-                $msg = "Cập nhật";
+                if ($result) $_SESSION['success'] = "Cập nhật khuyến mãi thành công!";
             } else {
-                $result = $this->promotionModel->createPromotion($data);
-                $msg = "Thêm mới";
+                // Thêm mới -> Nhận về ID vừa tạo (ví dụ: KM001)
+                $newId = $this->promotionModel->createPromotion($data);
+                if ($newId) {
+                    $id = $newId; // Gán ID mới để dùng cho việc update hàng loạt bên dưới
+                    $_SESSION['success'] = "Thêm mới khuyến mãi thành công (Mã: $id)!";
+                } else {
+                    $_SESSION['error'] = "Lỗi khi tạo khuyến mãi!";
+                    $this->redirect('/admin/promotions/create');
+                    return;
+                }
             }
 
-            if ($result) {
-                $_SESSION['success'] = "$msg chương trình khuyến mãi thành công!";
-            } else {
-                $_SESSION['error'] = "Có lỗi xảy ra!";
+            // --- XỬ LÝ ÁP DỤNG CHO LOẠI HÀNG (Nếu có chọn) ---
+            if (isset($_POST['scope']) && $_POST['scope'] === 'category') {
+                $idLhh = $_POST['id_lhh'] ?? '';
+                if (!empty($idLhh) && !empty($id)) {
+                    // Gọi hàm trong ProductModel để update hàng loạt
+                    $this->promotionModel->applyPromotionToCategory($id, $idLhh);
+                    $_SESSION['success'] .= " Đã áp dụng cho toàn bộ nhóm hàng đã chọn.";
+                }
             }
+
             $this->redirect('/admin/promotions');
         }
     }
@@ -783,40 +790,38 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function orders() {
-        // Lấy danh sách đơn hàng
-        $orders = $this->orderModel->getAllOrders();
+        // 1. Cấu hình phân trang
+        $ordersPerPage = 20;
+        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $offset = ($currentPage - 1) * $ordersPerPage;
+
+        // 2. Lấy từ khóa và trạng thái
+        $searchKeyword = $_GET['search'] ?? '';
+        $statusFilter = $_GET['status'] ?? '';
+
+        // 3. Gọi Model lấy dữ liệu và Tổng số dòng để phân trang
+        $totalOrders = $this->orderModel->countAllOrders($searchKeyword, $statusFilter);
+        $totalPages = ceil($totalOrders / $ordersPerPage);
+        
+        // Truyền tham số limit và offset vào hàm getAllOrders
+        $orders = $this->orderModel->getAllOrders($searchKeyword, $statusFilter, $ordersPerPage, $offset);
+
+        // 4. Truyền dữ liệu ra View
+        $success = $_SESSION['success'] ?? null;
+        $error = $_SESSION['error'] ?? null;
+        unset($_SESSION['success'], $_SESSION['error']);
 
         $this->renderView('admin/orders/index', [
             'title' => 'Quản lý Đơn hàng',
             'user' => Auth::user(),
             'orders' => $orders,
-            'success' => $_SESSION['success'] ?? null,
-            'error' => $_SESSION['error'] ?? null
+            'searchKeyword' => $searchKeyword,
+            'currentStatus' => $statusFilter,
+            'totalPages' => $totalPages,    // Thêm biến này cho view
+            'currentPage' => $currentPage,  // Thêm biến này cho view
+            'success' => $success,
+            'error' => $error
         ]);
-        unset($_SESSION['success'], $_SESSION['error']);
-    }
-
-    public function orderDetail($id) {
-        // Lấy thông tin đơn hàng
-        $order = $this->orderModel->getOrderById($id);
-        
-        if (!$order) {
-            $_SESSION['error'] = "Không tìm thấy đơn hàng!";
-            $this->redirect('/admin/orders');
-        }
-
-        // Lấy danh sách sản phẩm trong đơn
-        $items = $this->orderModel->getOrderItems($id);
-
-        $this->renderView('admin/orders/detail', [
-            'title' => 'Chi tiết đơn hàng #' . $id,
-            'user' => Auth::user(),
-            'order' => $order,
-            'items' => $items,
-            'success' => $_SESSION['success'] ?? null,
-            'error' => $_SESSION['error'] ?? null
-        ]);
-        unset($_SESSION['success'], $_SESSION['error']);
     }
 
     // Xử lý cập nhật trạng thái (POST)
@@ -836,7 +841,81 @@ class AdminController extends BaseController {
         }
     }
 
-    //Admin quản lý người dùng
+    /**
+     * Hiển thị chi tiết đơn hàng
+     * Sửa: Nhận $id làm tham số (từ router) thay vì $_GET
+     */
+    public function orderDetail($id = null) {
+        // Fallback: Nếu router không truyền tham số, thử lấy từ $_GET
+        if (!$id) {
+            $id = $_GET['id'] ?? null;
+        }
+
+        if (!$id) {
+            $_SESSION['error'] = 'Không tìm thấy mã đơn hàng!';
+            $this->redirect('/admin/orders'); // Dùng hàm redirect chuẩn của BaseController
+            return;
+        }
+
+        // Lấy thông tin đơn hàng
+        $order = $this->orderModel->getOrderById($id);
+        
+        if (!$order) {
+            $_SESSION['error'] = 'Đơn hàng không tồn tại!';
+            $this->redirect('/admin/orders');
+            return;
+        }
+
+        // Lấy chi tiết sản phẩm
+        $items = $this->orderModel->getOrderItems($id);
+        
+        // Hiển thị view
+        $success = $_SESSION['success'] ?? null;
+        $error = $_SESSION['error'] ?? null;
+        unset($_SESSION['success'], $_SESSION['error']);
+
+        $this->renderView('admin/orders/detail', [
+            'user' => Auth::user(), // Thêm user để hiển thị sidebar đúng
+            'order' => $order,
+            'items' => $items,
+            'title' => 'Chi tiết đơn hàng ' . $id,
+            'success' => $success,
+            'error' => $error
+        ]);
+    }
+
+    /**
+     * Xử lý cập nhật trạng thái (POST)
+     * Tên hàm khớp với route trong view detail: admin/order-update-status
+     */
+    public function orderUpdateStatus() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Lấy dữ liệu
+            $id = $_POST['id_dh'] ?? '';
+            $status = $_POST['trang_thai'] ?? '';
+
+            if (empty($id) || empty($status)) {
+                $_SESSION['error'] = 'Dữ liệu không hợp lệ!';
+                $this->redirect('/admin/orders');
+                return;
+            }
+
+            // Gọi Model cập nhật (Dùng $this->orderModel đã khởi tạo ở __construct)
+            if ($this->orderModel->updateOrderStatus($id, $status)) {
+                $_SESSION['success'] = "Đã cập nhật đơn hàng #$id sang trạng thái: $status";
+            } else {
+                $_SESSION['error'] = "Lỗi cập nhật trạng thái!";
+            }
+
+            // Quay lại trang chi tiết đúng
+            $this->redirect("/admin/order-detail/$id");
+        } else {
+            // Nếu không phải POST thì đá về danh sách
+            $this->redirect('/admin/orders');
+        }
+    }
+
+    // NGƯỜI DÙNG ADMIN
     /**
      * Hiển thị form sửa khách hàng
      */
@@ -857,7 +936,7 @@ class AdminController extends BaseController {
             'title' => 'Chi tiết khách hàng',
             'user' => Auth::user(),
             'customer' => $customer,
-            'addresses' => $addresses // <--- Biến này chứa danh sách địa chỉ
+            'addresses' => $addresses
         ]);
     }
 
@@ -874,7 +953,6 @@ class AdminController extends BaseController {
                 'email' => $_POST['email'],
                 'sdt' => $_POST['sdt'],
                 'gioi_tinh' => $_POST['gioi_tinh'],
-                // Nếu có nhập mật khẩu thì hash, không thì để null
                 'mat_khau' => !empty($password) ? password_hash($password, PASSWORD_DEFAULT) : null
             ];
 
@@ -898,7 +976,6 @@ class AdminController extends BaseController {
         if ($result === true) {
             $_SESSION['success'] = "Đã xóa khách hàng thành công!";
         } else {
-            // SỬA ĐOẠN NÀY: Nối thêm câu thông báo của bạn vào trước lỗi từ Model
             $_SESSION['error'] = "Bạn không thể xóa khách hàng này!" . $result;
         }
         $this->redirect('/admin/users');
@@ -909,9 +986,11 @@ class AdminController extends BaseController {
     // ======================================================
     public function statistics() {
         $statType = $_POST['stat_type'] ?? '';
-        // Mặc định lấy từ đầu tháng đến hiện tại
         $dateStart = $_POST['date_start'] ?? date('Y-m-01');
         $dateEnd = $_POST['date_end'] ?? date('Y-m-d');
+        
+        // 1. Nhận giới hạn từ Form (Mặc định là 5 nếu không chọn)
+        $limit = isset($_POST['limit']) ? (int)$_POST['limit'] : 5;
         
         $data = ['labels' => [], 'values' => []];
         $title = '';
@@ -919,30 +998,29 @@ class AdminController extends BaseController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $statType) {
             switch ($statType) {
                 case 'best-selling':
-                    $title = 'Sản phẩm bán chạy nhất';
-                    $results = $this->statisticModel->getBestSellingProducts($dateStart, $dateEnd);
+                    $title = 'Sản phẩm bán chạy'; // Đã bỏ chữ Top 5
+                    $results = $this->statisticModel->getBestSellingProducts($dateStart, $dateEnd, $limit);
                     break;
                 case 'revenue':
-                    $title = 'Tổng doanh thu theo ngày';
-                    $results = $this->statisticModel->getRevenue($dateStart, $dateEnd);
+                    $title = 'Tổng doanh thu';
+                    $results = $this->statisticModel->getRevenue($dateStart, $dateEnd, $limit);
                     break;
                 case 'orders':
-                    $title = 'Tổng số đơn hàng theo ngày';
-                    $results = $this->statisticModel->getOrdersCount($dateStart, $dateEnd);
+                    $title = 'Tổng số đơn hàng';
+                    $results = $this->statisticModel->getOrdersCount($dateStart, $dateEnd, $limit);
                     break;
                 case 'cancelled-orders':
-                    $title = 'Đơn hàng đã hủy theo ngày';
-                    $results = $this->statisticModel->getCancelledOrders($dateStart, $dateEnd);
+                    $title = 'Đơn hàng đã hủy';
+                    $results = $this->statisticModel->getCancelledOrders($dateStart, $dateEnd, $limit);
                     break;
                 case 'top-customers':
-                    $title = 'Top 5 Khách hàng mua nhiều nhất';
-                    $results = $this->statisticModel->getTopCustomers($dateStart, $dateEnd);
+                    $title = 'Khách hàng tiêu biểu';
+                    $results = $this->statisticModel->getTopCustomers($dateStart, $dateEnd, $limit);
                     break;
                 default:
                     $results = [];
             }
 
-            // Chuẩn bị dữ liệu cho Chart.js
             foreach ($results as $row) {
                 $data['labels'][] = $row['label'];
                 $data['values'][] = (float)$row['value'];
@@ -955,6 +1033,7 @@ class AdminController extends BaseController {
             'statType' => $statType,
             'dateStart' => $dateStart,
             'dateEnd' => $dateEnd,
+            'limit' => $limit, // Truyền biến limit sang View
             'chartTitle' => $title,
             'chartData' => $data
         ]);
@@ -1030,8 +1109,8 @@ class AdminController extends BaseController {
             'title' => 'Hồ sơ cá nhân',
             'user' => Auth::user(),
             'profile' => $user,
-            'address' => $defaultAddress, // Dùng cho Form nhập nhanh
-            'addresses' => $addresses,    // Dùng cho Bảng danh sách bên dưới
+            'address' => $defaultAddress,
+            'addresses' => $addresses,
             'success' => $_SESSION['success'] ?? null,
             'error' => $_SESSION['error'] ?? null
         ]);
@@ -1042,7 +1121,7 @@ class AdminController extends BaseController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_SESSION['user']['ID_TK'];
             $password = $_POST['password'];
-            $dia_chi = $_POST['dia_chi']; // Lấy địa chỉ từ form
+            $dia_chi = $_POST['dia_chi'];
             
             $data = [
                 'ho_ten' => $_POST['ho_ten'],
@@ -1070,4 +1149,6 @@ class AdminController extends BaseController {
             $this->redirect('/admin/profile');
         }
     }
+
+    
 }

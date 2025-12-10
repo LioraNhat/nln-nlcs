@@ -102,4 +102,16 @@ class PromotionModel extends BaseModel {
             return false;
         }
     }
+
+    // --- 4. HÀM ÁP DỤNG KM CHO LOẠI HÀNG (THÊM MỚI) ---
+    public function applyPromotionToCategory($promoId, $categoryId) {
+        try {
+            // Cập nhật ID_KM cho tất cả sản phẩm thuộc Loại hàng hóa này
+            $sql = "UPDATE hang_hoa SET ID_KM = ? WHERE ID_LHH = ?";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([$promoId, $categoryId]);
+        } catch (\PDOException $e) {
+            return false;
+        }
+    }
 }

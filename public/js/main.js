@@ -32,35 +32,63 @@ document.addEventListener("DOMContentLoaded", function() {
     // 2. XỬ LÝ NÚT MENU 3 GẠCH (Giữ nguyên)
     const menuToggle = document.querySelector('.menu-toggle');
     const verticalNav = document.querySelector('.vertical-nav'); 
+    
+    // Kiểm tra xem tìm thấy phần tử không
+    if (!menuToggle) console.error("Lỗi: Không tìm thấy class .menu-toggle");
+    if (!verticalNav) console.error("Lỗi: Không tìm thấy class .vertical-nav");
+
     if (menuToggle && verticalNav) {
-        menuToggle.addEventListener('click', function() {
+        menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation(); // Ngăn chặn sự kiện nổi bọt
             verticalNav.classList.toggle('open');
+            console.log("Đã click menu! Class list hiện tại:", verticalNav.classList);
+        });
+
+        // Thêm tính năng: Click ra ngoài thì đóng menu
+        document.addEventListener('click', function(e) {
+            if (!verticalNav.contains(e.target) && !menuToggle.contains(e.target)) {
+                verticalNav.classList.remove('open');
+            }
         });
     }
 
-    // 3. XỬ LÝ HEADER (Đã sửa lỗi cho trang con)
+    // 2. XỬ LÝ HEADER SCROLL (Đã tối ưu)
     let lastScrollTop = 0;
     const mainHeader = document.querySelector('.main-header');
     const subNav = document.querySelector('.sub-nav'); 
     const topBar = document.querySelector('.top-bar-shipping');
-    if (mainHeader && topBar) { 
-        let headerHeight = mainHeader.offsetHeight;
-        if (subNav) {
-            subNav.style.top = headerHeight + 'px'; 
+
+    if (mainHeader) { 
+        // Cập nhật vị trí top cho menu dọc khi header thay đổi
+        function updateMenuPosition() {
+            const headerHeight = mainHeader.offsetHeight + (topBar ? topBar.offsetHeight : 0);
+            // Nếu header đang sticky top=0 thì chỉ cần lấy height header
+            const currentHeaderHeight = mainHeader.getBoundingClientRect().height;
+            
+            // Nếu bạn muốn menu nằm ngay dưới header
+            if (verticalNav) verticalNav.style.top = currentHeaderHeight + 'px';
         }
-        if (verticalNav) { 
-             verticalNav.style.top = headerHeight + 'px';
-        }
-        const topBarHeight = topBar.offsetHeight;
-        mainHeader.style.top = '0'; 
+
+        // Gọi lần đầu
+        updateMenuPosition();
+        window.addEventListener('resize', updateMenuPosition);
+
+        // Xử lý ẩn hiện header
         window.addEventListener('scroll', function() {
             let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            if (scrollTop > lastScrollTop && scrollTop > topBarHeight) {
-                mainHeader.classList.add('header-hidden');
-                if (subNav) subNav.classList.add('header-hidden'); 
+            
+            // Chỉ ẩn khi scroll xuống quá 100px
+            if (scrollTop > 100) {
+                if (scrollTop > lastScrollTop) {
+                    // Scroll Down -> Ẩn
+                    mainHeader.classList.add('header-hidden');
+                    if(verticalNav) verticalNav.classList.remove('open'); // Đóng menu nếu đang mở
+                } else {
+                    // Scroll Up -> Hiện
+                    mainHeader.classList.remove('header-hidden');
+                }
             } else {
                 mainHeader.classList.remove('header-hidden');
-                if (subNav) subNav.classList.remove('header-hidden');
             }
             lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; 
         });

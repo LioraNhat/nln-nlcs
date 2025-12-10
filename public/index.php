@@ -30,6 +30,9 @@ $router->add('POST', 'auth/handleRegister', 'AuthController@handleRegister'); //
 // Đăng xuất
 $router->add('POST', 'auth/logout', 'AuthController@logout'); 
 
+// Thêm route tìm kiếm sản phẩm (Front-end)
+$router->add('GET', 'search', 'ProductController@search');
+
 // ==================================================================
 // 2. NHÓM CHỨC NĂNG TÀI KHOẢN
 // ==================================================================

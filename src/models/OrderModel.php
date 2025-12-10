@@ -117,15 +117,24 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Thêm chi tiết sản phẩm vào đơn hàng
+     * Thêm chi tiết sản phẩm vào đơn hàng (ĐÃ SỬA: Lưu thêm đơn giá bán)
      */
     public function addOrderDetails($orderId, $cartItems) {
-        $sql = "INSERT INTO chi_tiet_don_hang (ID_DH, ID_HH, SO_LUONG_BAN_RA) VALUES (?, ?, ?)";
+        // [SỬA LỖI QUAN TRỌNG] Thêm cột `don_gia_ban` vào câu lệnh INSERT
+        $sql = "INSERT INTO chi_tiet_don_hang (ID_DH, ID_HH, SO_LUONG_BAN_RA, don_gia_ban) VALUES (?, ?, ?, ?)";
         $stmt = $this->db->prepare($sql);
+        
         try {
             $this->db->beginTransaction();
             foreach ($cartItems as $itemId => $item) {
-                $stmt->execute([$orderId, $itemId, $item['quantity']]);
+                // Tính giá bán sau giảm giá (nếu có) để lưu vào lịch sử
+                $finalPrice = $item['price'];
+                if (isset($item['discount_percent']) && $item['discount_percent'] > 0) {
+                    $finalPrice = $item['price'] * (1 - $item['discount_percent'] / 100);
+                }
+                
+                // Thực thi lệnh insert
+                $stmt->execute([$orderId, $itemId, $item['quantity'], $finalPrice]);
             }
             $this->db->commit();
             return true;
@@ -217,14 +226,24 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Đếm tổng số đơn hàng (Admin - Có filter)
+     * Đếm tổng số đơn hàng (Admin - Có filter TẤT CẢ thuộc tính)
      */
     public function countAllOrders($keyword = '', $statusFilter = '') {
         $sqlWhere = "WHERE 1=1";
         $params = [];
 
         if (!empty($keyword)) {
-            $sqlWhere .= " AND (dh.ID_DH LIKE :keyword OR tk.HO_TEN LIKE :keyword)";
+            // Tìm kiếm trên nhiều cột: Mã ĐH, Tên KH, SĐT, Email, Địa chỉ, Trạng thái, Số tiền
+            $sqlWhere .= " AND (
+                dh.ID_DH LIKE :keyword 
+                OR tk.HO_TEN LIKE :keyword 
+                OR tk.SDT_TK LIKE :keyword 
+                OR tk.EMAIL LIKE :keyword
+                OR dh.DIA_CHI_GIAO_DH LIKE :keyword
+                OR dht.TRANG_THAI_DHHT LIKE :keyword
+                OR dh.TRANG_THAI_THANH_TOAN LIKE :keyword
+                OR CAST(dh.SO_TIEN_THANH_TOAN AS CHAR) LIKE :keyword
+            )";
             $params[':keyword'] = '%' . $keyword . '%';
         }
 
@@ -246,14 +265,24 @@ class OrderModel extends BaseModel {
     }
 
     /**
-     * Lấy danh sách đơn hàng (Có phân trang & filter)
+     * Lấy danh sách đơn hàng (Có phân trang & filter TẤT CẢ thuộc tính)
      */
     public function getAllOrders($keyword = '', $statusFilter = '', $limit = 20, $offset = 0) {
         $sqlWhere = "WHERE 1=1";
         $params = [];
 
         if (!empty($keyword)) {
-            $sqlWhere .= " AND (dh.ID_DH LIKE :keyword OR tk.HO_TEN LIKE :keyword)";
+            // Tìm kiếm trên nhiều cột: Mã ĐH, Tên KH, SĐT, Email, Địa chỉ, Trạng thái, Số tiền
+            $sqlWhere .= " AND (
+                dh.ID_DH LIKE :keyword 
+                OR tk.HO_TEN LIKE :keyword 
+                OR tk.SDT_TK LIKE :keyword 
+                OR tk.EMAIL LIKE :keyword
+                OR dh.DIA_CHI_GIAO_DH LIKE :keyword
+                OR dht.TRANG_THAI_DHHT LIKE :keyword
+                OR dh.TRANG_THAI_THANH_TOAN LIKE :keyword
+                OR CAST(dh.SO_TIEN_THANH_TOAN AS CHAR) LIKE :keyword
+            )";
             $params[':keyword'] = '%' . $keyword . '%';
         }
 
@@ -270,12 +299,21 @@ class OrderModel extends BaseModel {
                     dht.TRANG_THAI_DHHT,
                     tk.HO_TEN,
                     tk.SDT_TK,
-                    tk.ID_TK
+                    tk.ID_TK,
+                    dh.DIA_CHI_GIAO_DH
                 FROM don_hang dh
                 LEFT JOIN don_hang_hien_tai dht ON dh.ID_DH = dht.ID_DH
                 LEFT JOIN tai_khoan tk ON dh.ID_TK = tk.ID_TK
                 $sqlWhere
-                ORDER BY dh.NGAY_GIO_TAO_DON DESC
+                ORDER BY 
+                    FIELD(dht.TRANG_THAI_DHHT, 
+                        'Chờ xử lý', 
+                        'Đã xác nhận', 
+                        'Đang giao hàng', 
+                        'Giao hàng thành công', 
+                        'Đã hủy', 
+                        'Khách hủy') ASC, 
+                    dh.NGAY_GIO_TAO_DON DESC
                 LIMIT :limit OFFSET :offset";
         
         $stmt = $this->db->prepare($sql);
@@ -289,15 +327,10 @@ class OrderModel extends BaseModel {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
     /**
      * =================================================================
      * PHẦN 2: DÙNG CHO CHI TIẾT ĐƠN HÀNG & CẬP NHẬT
      * =================================================================
-     */
-
-    /**
-     * Lấy chi tiết thông tin đơn hàng
      */
     public function getOrderById($orderId) {
         $sql = "SELECT 
@@ -343,7 +376,6 @@ class OrderModel extends BaseModel {
     /**
      * Cập nhật trạng thái đơn hàng
      */
-    // Cập nhật trạng thái đơn hàng (Có tự động cập nhật thanh toán)
     public function updateOrderStatus($id, $status) {
         try {
             // Bắt đầu giao dịch để đảm bảo tính toàn vẹn dữ liệu

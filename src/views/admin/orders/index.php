@@ -1,6 +1,28 @@
 <?php
+// 1. Gọi Header & Sidebar
 require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/sidebar.php';
+
+// Hàm helper lấy class badge
+function getBadgeClass($status) {
+    switch($status) {
+        case 'Chờ xử lý': return 'bg-warning text-dark';
+        case 'Đã xác nhận': return 'bg-primary';
+        case 'Đang giao hàng': return 'bg-info text-dark';
+        case 'Giao hàng thành công': return 'bg-success';
+        case 'Đã hủy': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+// Mảng ánh xạ trạng thái sang số thứ tự để sắp xếp (ưu tiên đơn cần xử lý)
+$mapStatus = [
+    'Chờ xử lý' => 1,
+    'Đã xác nhận' => 2,
+    'Đang giao hàng' => 3,
+    'Giao hàng thành công' => 4,
+    'Đã hủy' => 5,
+];
 ?>
 
 <main class="app-main">
@@ -50,25 +72,24 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                         </thead>
                         <tbody>
                             <?php foreach ($orders as $row): ?>
+                                <?php 
+                                    // Lấy giá trị số để sắp xếp (mặc định là 99 nếu không tìm thấy)
+                                    $sortStatus = $mapStatus[$row['TRANG_THAI_DHHT']] ?? 99; 
+                                ?>
+                                
                                 <tr>
-                                    <td><a href="<?= BASE_PATH ?>/admin/order-detail/<?= $row['ID_DH'] ?>" class="fw-bold"><?= $row['ID_DH'] ?></a></td>
+                                    <td><?= $row['ID_DH'] ?></td>
                                     <td>
                                         <div class="fw-bold"><?= htmlspecialchars($row['HO_TEN']) ?></div>
                                         <small class="text-muted">ID: <?= $row['ID_TK'] ?></small>
                                     </td>
                                     <td><?= date('d/m/Y H:i', strtotime($row['NGAY_GIO_TAO_DON'])) ?></td>
                                     <td class="text-end fw-bold text-danger"><?= number_format($row['SO_TIEN_THANH_TOAN']) ?>đ</td>
-                                    <td class="text-center">
-                                        <?php 
-                                        $stt = $row['TRANG_THAI_DHHT'];
-                                        $badge = 'bg-secondary';
-                                        if ($stt == 'Chờ xử lý') $badge = 'bg-warning text-dark';
-                                        elseif ($stt == 'Đang giao hàng') $badge = 'bg-info text-dark';
-                                        elseif ($stt == 'Giao hàng thành công') $badge = 'bg-success';
-                                        elseif ($stt == 'Đã hủy') $badge = 'bg-danger';
-                                        ?>
-                                        <span class="badge <?= $badge ?>"><?= $stt ?></span>
+                                    
+                                    <td data-order="<?= $sortStatus ?>">
+                                        <span class="badge <?= getBadgeClass($row['TRANG_THAI_DHHT']) ?>"><?= $row['TRANG_THAI_DHHT'] ?></span>
                                     </td>
+
                                     <td class="text-center">
                                         <?php if ($row['TRANG_THAI_THANH_TOAN'] == 'Đã thanh toán'): ?>
                                             <span class="badge bg-success"><i class="bi bi-check-circle"></i> Đã TT</span>
@@ -92,10 +113,26 @@ require_once __DIR__ . '/../layouts/sidebar.php';
 </main>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>
+
 <script>
-    $(document).ready(function() { 
-        $('#table-orders').DataTable({
-            "order": [[ 2, "desc" ]] // Sắp xếp mặc định theo ngày đặt (cột thứ 3)
-        }); 
+    // Sử dụng Event Listener 'DOMContentLoaded' để đảm bảo HTML tải xong
+    document.addEventListener('DOMContentLoaded', function() {
+        // Kiểm tra xem jQuery đã được tải chưa
+        if (typeof $ !== 'undefined') {
+            $('#table-orders').DataTable({
+                "paging": false,       // Tắt phân trang client (vì đã limit ở server)
+                "lengthChange": false,
+                "searching": false,    // Tắt search client (vì đã có form search server)
+                "ordering": false,     // QUAN TRỌNG: Tắt sắp xếp client để giữ thứ tự từ SQL
+                "info": false,
+                "autoWidth": false,
+                "responsive": true,
+                "language": {
+                    "emptyTable": "Không có dữ liệu đơn hàng"
+                }
+            });
+        } else {
+            console.error("Lỗi: jQuery chưa được tải. Hãy kiểm tra file layouts/footer.php");
+        }
     });
 </script>

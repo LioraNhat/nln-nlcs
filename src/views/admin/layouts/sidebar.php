@@ -12,7 +12,7 @@ function menuActive($uri, $keyword) {
     <div class="sidebar-brand">
         <a href="<?php echo BASE_PATH; ?>/admin/dashboard" class="brand-link">
             <img src="<?php echo BASE_PATH; ?>/admin_assets/assets/img/AdminLTELogo.png" alt="Logo" class="brand-image opacity-75 shadow" />
-            <span class="brand-text fw-light">NLN Food Admin</span>
+            <span class="brand-text fw-light">GreenMeal Admin</span>
         </a>
     </div>
     <div class="sidebar-wrapper">

@@ -109,18 +109,12 @@ class CheckoutController extends BaseController {
 
         $userId = Auth::id();
         $cartItems = $_SESSION['cart_for_checkout'] ?? [];
-
-        // 1. Kiểm tra giỏ hàng
         if (empty($cartItems)) {
             $this->redirect('/cart/index');
             return;
         }
-
-        // 2. Lấy thông tin từ Form
         $id_pttt = $_POST['payment_method_id']; 
         $selected_address_id = $_POST['selected_address_id']; 
-
-        // 3. Lấy và định dạng địa chỉ
         $address = $this->addressModel->findAddressById($userId, $selected_address_id);
         
         if (!$address) {
@@ -128,11 +122,8 @@ class CheckoutController extends BaseController {
             return;
         }
         $formattedAddress = $this->formatAddressString($address);
-
-        // 4. Tính toán tổng tiền
         $totals = $this->calculateCartTotals($cartItems);
 
-        // 5. Chuẩn bị dữ liệu cho bảng 'don_hang'
         $newOrderId = $this->orderModel->generateNewOrderId(); 
         $data = [
             'ID_DH' => $newOrderId,
@@ -145,35 +136,20 @@ class CheckoutController extends BaseController {
             'TRANG_THAI_THANH_TOAN' => ($id_pttt == 'PTTT1') ? 'Chưa thanh toán' : 'Đã thanh toán' 
         ];
 
-        // 6. Thực thi lưu vào CSDL
         try {
-            // Lưu đơn hàng chính
             $this->orderModel->createOrder($data);
-            
-            // Lưu chi tiết đơn hàng
             $this->orderModel->addOrderDetails($newOrderId, $cartItems);
-            
-            // Tạo trạng thái "Chờ xử lý"
             $this->orderModel->createInitialOrderStatus($newOrderId);
-
-            // 7. Dọn dẹp Session và Chuyển hướng
             $userCartId = Auth::cartId();
-
-            // Xóa các sản phẩm vừa mua ra khỏi giỏ hàng CHÍNH
             foreach ($cartItems as $id => $item) {
                 $this->cartModel->removeProductForUser($userCartId, $id);
             }
-            // Xóa giỏ hàng tạm thời
             unset($_SESSION['cart_for_checkout']); 
-            
-            // Lưu ID để trang success hiển thị
             $_SESSION['last_order_id'] = $newOrderId; 
-            
             $this->redirect('/checkout/success');
 
         } catch (\Exception $e) {
             error_log($e->getMessage());
-            // Có thể thêm flash message lỗi ở đây nếu cần
             $this->redirect('/checkout/index');
         }
     }

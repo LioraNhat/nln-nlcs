@@ -58,6 +58,43 @@ $isEdit = $isEdit ?? false;
                             </div>
                         </div>
 
+                        <!--  -->
+                        <div class="form-group mb-3 border p-3 rounded bg-light">
+                        <label class="form-label fw-bold text-primary">Phạm vi áp dụng (Tùy chọn)</label>
+                        
+                        <div class="form-check mb-2">
+                            <input class="form-check-input scope-radio" type="radio" name="scope" id="scope_none" value="none" checked>
+                            <label class="form-check-label" for="scope_none">
+                                Chỉ tạo khuyến mãi (Sẽ gán cho từng sản phẩm cần)
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input scope-radio" type="radio" name="scope" id="scope_category" value="category">
+                            <label class="form-check-label" for="scope_category">
+                                Áp dụng ngay cho Loại Hàng Hóa:
+                            </label>
+                        </div>
+                        
+                        <div class="ms-4 mt-2" id="category_select_box" style="display: none;">
+                            <select name="id_lhh" class="form-select">
+                                <option value="">-- Chọn Loại Hàng --</option>
+                                <?php 
+                                    if(!empty($loai_hang)): 
+                                        foreach($loai_hang as $lhh):
+                                ?>
+                                    <option value="<?= $lhh['ID_LHH'] ?>"><?= $lhh['TEN_LHH'] ?></option>
+                                <?php 
+                                        endforeach; 
+                                    endif; 
+                                ?>
+                            </select>
+                            <small class="text-muted d-block mt-1">
+                                <i class="bi bi-info-circle"></i> Tất cả sản phẩm thuộc loại này sẽ được cập nhật mã KM mới.
+                            </small>
+                        </div>
+                        <!--  -->
+
                         <?php if ($isEdit): ?>
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Trạng thái đặc biệt</label>
@@ -80,5 +117,18 @@ $isEdit = $isEdit ?? false;
         </div>
     </div>
 </main>
+
+<script>
+    document.querySelectorAll('.scope-radio').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const catBox = document.getElementById('category_select_box');
+            if (this.value === 'category') {
+                catBox.style.display = 'block';
+            } else {
+                catBox.style.display = 'none';
+            }
+        });
+    });
+</script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

@@ -6,10 +6,7 @@ use App\Core\BaseModel;
 use PDO;
 
 class CartModel extends BaseModel {
-
-    // Lấy thông tin JOINs cơ bản cho sản phẩm
     private function getProductJoins() {
-        // SỬA LỖI: Bỏ 'FROM' và 'WHERE' ra khỏi hàm join
         return "
             INNER JOIN gia_ban_hien_tai g ON h.ID_HH = g.ID_HH
             INNER JOIN thoi_diem t ON g.ID_TD = t.ID_TD
@@ -20,39 +17,41 @@ class CartModel extends BaseModel {
     }
 
     /**
-     * HÀM MỚI: Lấy toàn bộ giỏ hàng cho user ĐÃ ĐĂNG NHẬP
-     * Trả về mảng có format GIỐNG HỆT $_SESSION['cart']
+     * Lấy toàn bộ giỏ hàng cho user ĐÃ ĐĂNG NHẬP
      */
     public function getCartContentsForUser($id_gh) {
         $sql = "SELECT 
                     ct.ID_HH, ct.SO_LUONG_SP,
                     h.TEN_HH, h.link_anh,
-                    g.GIA_HIEN_TAI, km.PHAN_TRAM_KM
+                    g.GIA_HIEN_TAI, 
+                    IFNULL(km.PHAN_TRAM_KM, 0) as PHAN_TRAM_KM 
                 FROM chi_tiet_gio_hang ct
                 INNER JOIN hang_hoa h ON ct.ID_HH = h.ID_HH
                 " . $this->getProductJoins() . "
-                /* SỬA LỖI: Thêm điều kiện WHERE (thời điểm giá) */
                 WHERE ct.ID_GH = ?
                 AND h.DUOC_PHEP_BAN = 1
-                AND (NOW() BETWEEN t.NGAY_BD_GIA_BAN AND t.NGAY_KT_GIA_BAN)
-            ";
+                AND (NOW() >= t.NGAY_BD_GIA_BAN AND NOW() <= t.NGAY_KT_GIA_BAN)"; 
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$id_gh]);
         $itemsFromDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         $cartItems = [];
         foreach ($itemsFromDb as $item) {
             $cartItems[$item['ID_HH']] = [
-                'id' => $item['ID_HH'], 'name' => $item['TEN_HH'],
-                'price' => $item['GIA_HIEN_TAI'], 'image' => $item['link_anh'],
-                'quantity' => $item['SO_LUONG_SP'], 'discount_percent' => $item['PHAN_TRAM_KM'] ?? 0
+                'id' => $item['ID_HH'], 
+                'name' => $item['TEN_HH'],
+                'price' => $item['GIA_HIEN_TAI'], 
+                'image' => $item['link_anh'],
+                'quantity' => $item['SO_LUONG_SP'], 
+                'discount_percent' => $item['PHAN_TRAM_KM'] // Đã xử lý IFNULL trong SQL
             ];
         }
         return $cartItems;
     }
 
     /**
-     * HÀM MỚI: Thêm/Cập nhật sản phẩm cho user (Logic "UPSERT")
+     * Thêm/Cập nhật sản phẩm cho user (Logic "UPSERT")
      */
     public function addProductForUser($id_gh, $id_hh, $quantity) {
         $stmt_check = $this->db->prepare("SELECT SO_LUONG_SP FROM chi_tiet_gio_hang WHERE ID_GH = ? AND ID_HH = ?");

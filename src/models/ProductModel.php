@@ -64,40 +64,50 @@ class ProductModel extends BaseModel {
     }
 
     /**
-     * Tìm kiếm sản phẩm theo tên (Cho trang tìm kiếm User)
-     * (Tôi thêm hàm này luôn để tránh lỗi tiếp theo nếu bạn tìm kiếm)
+     * Tìm kiếm sản phẩm (Dùng cho User - Trang Search)
+     * Tìm theo: Tên sản phẩm HOẶC Tên loại hàng
      */
-    public function searchProductsByName($searchTerm, $filters = [], $limit = 12, $offset = 0) {
-        $select = "SELECT h.ID_HH, h.TEN_HH, h.link_anh, g.GIA_HIEN_TAI, km.PHAN_TRAM_KM";
-        $from = " FROM hang_hoa h
-                  INNER JOIN loai_hang_hoa lhh ON h.ID_LHH = lhh.ID_LHH"
-               . $this->getPriceJoins() .
-               " " . $this->getPromoJoins();
-        
-        $whereClauses = [
-            "(NOW() BETWEEN t.NGAY_BD_GIA_BAN AND t.NGAY_KT_GIA_BAN)",
-            "(h.TEN_HH LIKE :search_term)",
-            "(h.DUOC_PHEP_BAN = 1)"
-        ];
-        $params = [':search_term' => '%' . $searchTerm . '%'];
+    public function searchProducts($searchTerm, $limit = 12, $offset = 0) {
+    // Chuẩn hóa từ khóa
+    $search = trim($searchTerm);
+    // REGEXP: match đúng từ, không match 'ca' trong 'cà' hay 'carrot'
+    $regex = '[[:<:]]' . $search . '[[:>:]]';
 
-        // Logic sắp xếp giá (nếu có)
-        $orderBy = "ORDER BY h.TEN_HH ASC";
-        
-        $sql = $select . $from . " WHERE " . implode(" AND ", $whereClauses) 
-               . " " . $orderBy 
-               . " LIMIT :limit OFFSET :offset";
-        
-        $stmt = $this->db->prepare($sql);
-        foreach ($params as $key => $value) {
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+    $sql = "SELECT 
+                h.ID_HH, 
+                h.TEN_HH, 
+                h.link_anh, 
+                h.ID_DVT,
+                lhh.TEN_LHH,
+                dvt.DVT,
+                g.GIA_HIEN_TAI
+            FROM hang_hoa h
+            LEFT JOIN loai_hang_hoa lhh ON h.ID_LHH = lhh.ID_LHH
+            LEFT JOIN dvt ON h.ID_DVT = dvt.ID_DVT
+            LEFT JOIN gia_ban_hien_tai g ON h.ID_HH = g.ID_HH 
+                    AND g.ID_TD = (
+                        SELECT ID_TD FROM thoi_diem 
+                        WHERE NOW() BETWEEN NGAY_BD_GIA_BAN AND NGAY_KT_GIA_BAN 
+                        LIMIT 1
+                    )
+            WHERE h.DUOC_PHEP_BAN = 1
+              AND (
+                  h.TEN_HH REGEXP :regex
+                  OR lhh.TEN_LHH REGEXP :regex
+              )
+            ORDER BY h.TEN_HH ASC
+            LIMIT :limit OFFSET :offset";
 
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+    $stmt = $this->db->prepare($sql);
+
+    // Bind dữ liệu
+    $stmt->bindValue(':regex', $regex); // không dùng % nữa
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
     public function findProductById($productId) {
         $sql = "SELECT h.*, g.GIA_HIEN_TAI, km.PHAN_TRAM_KM
@@ -525,5 +535,47 @@ class ProductModel extends BaseModel {
 
         // Format thành chuỗi 5 ký tự (VD: 00006)
         return str_pad($num, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Thêm giá mới cho sản phẩm (Vào bảng GIA_BAN_HIEN_TAI)
+     */
+    public function insertPrice($productId, $price) {
+        // Lấy ID thời điểm hiện tại (mặc định là TD003 nếu không tìm thấy)
+        $timeId = $this->getCurrentTimeId(); 
+        
+        $sql = "INSERT INTO gia_ban_hien_tai (ID_HH, ID_TD, GIA_HIEN_TAI) VALUES (?, ?, ?)";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$productId, $timeId, $price]);
+    }
+
+    /**
+     * Cập nhật giá sản phẩm (Nếu chưa có thì thêm mới)
+     */
+    public function updatePrice($productId, $price) {
+        $timeId = $this->getCurrentTimeId();
+        
+        // Kiểm tra xem sản phẩm đã có giá ở thời điểm này chưa
+        $check = $this->db->prepare("SELECT 1 FROM gia_ban_hien_tai WHERE ID_HH = ? AND ID_TD = ?");
+        $check->execute([$productId, $timeId]);
+        
+        if ($check->rowCount() > 0) {
+            // Nếu có rồi -> Update
+            $sql = "UPDATE gia_ban_hien_tai SET GIA_HIEN_TAI = ? WHERE ID_HH = ? AND ID_TD = ?";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([$price, $productId, $timeId]);
+        } else {
+            // Nếu chưa có -> Insert mới
+            return $this->insertPrice($productId, $price);
+        }
+    }
+
+    /**
+     * Áp dụng mã khuyến mãi cho toàn bộ sản phẩm thuộc 1 loại hàng
+     */
+    public function applyPromotionToCategory($promoId, $categoryId) {
+        $sql = "UPDATE hang_hoa SET ID_KM = ? WHERE ID_LHH = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$promoId, $categoryId]);
     }
 }

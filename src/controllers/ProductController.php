@@ -15,6 +15,32 @@ class ProductController extends BaseController {
         $this->categoryModel = new CategoryModel();
     }
 
+    /**
+     * Xử lý tìm kiếm
+     */
+    public function search() {
+        // 1. Lấy từ khóa từ URL (ví dụ: ?q=Cá)
+        $keyword = $_GET['q'] ?? '';
+        
+        // 2. Gọi Model tìm kiếm
+        $products = [];
+        if (!empty($keyword)) {
+            $products = $this->productModel->searchProducts($keyword);
+        }
+
+        // 3. Lấy danh mục (để hiển thị Menu Sidebar nếu cần)
+        $categories = $this->categoryModel->getAllCategories();
+
+        // 4. Hiển thị View kết quả
+        $this->renderView('search/index', [
+            'title' => 'Kết quả tìm kiếm: ' . $keyword,
+            'products' => $products,
+            'searchTerm' => $keyword,
+            'categories' => $categories,
+            'filters' => ['price' => '', 'sort' => ''] 
+        ]);
+    }
+
     public function detail($productId) {
         $product = $this->productModel->findProductById($productId);
         if (!$product) {
@@ -50,7 +76,6 @@ class ProductController extends BaseController {
     }
 
     /**
-     * SỬA LẠI HOÀN TOÀN HÀM NÀY
      * Xử lý URL: /product/productType/{id_lhh}
      */
     public function productType($id_lhh) {

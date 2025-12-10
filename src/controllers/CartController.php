@@ -23,6 +23,16 @@ class CartController extends BaseController {
      */
     public function add() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') $this->redirect('/');
+
+        if (empty($_POST['id_hh'])) {
+            // Trả về lỗi JSON nếu là Ajax hoặc redirect
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                 echo json_encode(['success' => false, 'message' => 'Lỗi: Không tìm thấy sản phẩm']);
+                 exit;
+            }
+            $this->redirect('/');
+        }
+
         $id_hh = $_POST['id_hh'];
         $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
         $totalCount = 0;
@@ -48,12 +58,7 @@ class CartController extends BaseController {
             $totalCount = $this->cartModel->getSessionItemCount($_SESSION['cart']);
         }
 
-        // ===============================================
-        // SỬA LỖI: Lưu vào Session
-        // ===============================================
         $_SESSION['cart_count'] = $totalCount;
-        // ===============================================
-
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'cartCount' => $totalCount]);
@@ -73,26 +78,12 @@ class CartController extends BaseController {
         if ($isLoggedIn) {
             $userCartId = Auth::cartId(); 
             $cartItems = $this->cartModel->getCartContentsForUser($userCartId);
-            // ===============================================
-            // SỬA LỖI: Tính toán lại count khi xem
-            // ===============================================
             $totalCount = $this->cartModel->getCartItemCountForUser($userCartId);
-            // ===============================================
         } else {
             $cartItems = $_SESSION['cart'] ?? [];
-            // ===============================================
-            // SỬA LỖI: Tính toán lại count khi xem
-            // ===============================================
             $totalCount = $this->cartModel->getSessionItemCount($cartItems);
-            // ===============================================
         }
-        
-        // ===============================================
-        // SỬA LỖI: Luôn lưu count vào Session trước khi render
-        // ===============================================
         $_SESSION['cart_count'] = $totalCount;
-        // ===============================================
-
         $totals = $this->calculateCartTotals($cartItems);
         
         $this->renderView('cart/index', [
@@ -105,10 +96,16 @@ class CartController extends BaseController {
     }
 
     /**
-     * HÀM UPDATE (Đã sửa)
+     * HÀM UPDATE
      */
     public function update() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') $this->redirect('/');
+
+        if (empty($_POST['id_hh']) || !isset($_POST['quantity'])) {
+             echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ']);
+             exit;
+        }
+
         $id_hh = $_POST['id_hh'];
         $quantity = (int)$_POST['quantity'];
         $totalCount = 0; $cartItems = [];
@@ -126,13 +123,7 @@ class CartController extends BaseController {
             $cartItems = $_SESSION['cart'] ?? [];
             $totalCount = $this->cartModel->getSessionItemCount($cartItems);
         }
-
-        // ===============================================
-        // SỬA LỖI: Lưu vào Session
-        // ===============================================
         $_SESSION['cart_count'] = $totalCount;
-        // ===============================================
-
         $totals = $this->calculateCartTotals($cartItems);
         header('Content-Type: application/json');
         echo json_encode([
