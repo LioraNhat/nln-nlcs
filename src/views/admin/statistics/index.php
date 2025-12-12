@@ -32,19 +32,29 @@
                                 </select>
                             </div>
 
-                            <div class="form-group col-md-3 mb-3">
+                            <div class="form-group col-md-2 mb-3" id="topLimitGroup" style="display: none;">
+                                <label for="top-limit" class="fw-bold">Số lượng hiển thị:</label>
+                                <select id="top-limit" name="limit" class="form-select">
+                                    <option value="5" <?= (isset($limit) && $limit == 5) ? 'selected' : '' ?>>Top 5</option>
+                                    <option value="10" <?= (isset($limit) && $limit == 10) ? 'selected' : '' ?>>Top 10</option>
+                                    <option value="15" <?= (isset($limit) && $limit == 15) ? 'selected' : '' ?>>Top 15</option>
+                                    <option value="20" <?= (isset($limit) && $limit == 20) ? 'selected' : '' ?>>Top 20</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group col-md-2 mb-3">
                                 <label for="date_start" class="fw-bold">Từ ngày:</label>
                                 <input type="date" class="form-control" name="date_start" value="<?= $dateStart ?>" required>
                             </div>
 
-                            <div class="form-group col-md-3 mb-3">
+                            <div class="form-group col-md-2 mb-3">
                                 <label for="date_end" class="fw-bold">Đến ngày:</label>
                                 <input type="date" class="form-control" name="date_end" value="<?= $dateEnd ?>" required>
                             </div>
 
                             <div class="form-group col-md-3 mb-3 d-flex gap-2">
                                 <button class="btn btn-primary w-50" type="submit"><i class="bi bi-filter"></i> Xem</button>
-                                <button class="btn btn-success w-50" type="button" id="printBTN"><i class="bi bi-printer"></i> In</button>
+                                <!-- <button class="btn btn-success w-50" type="button" id="printBTN"><i class="bi bi-printer"></i> In</button> -->
                             </div>
                         </div>
                     </form>
@@ -54,14 +64,16 @@
             <?php if (!empty($chartData['labels'])): ?>
                 <div id="printableArea">
                     <div class="text-center mb-4 d-none d-print-block">
-                        <h3>BÁO CÁO THỐNG KÊ - NLN FOOD</h3>
-                        <p>Từ ngày <?= date('d/m/Y', strtotime($dateStart)) ?> đến <?= date('d/m/Y', strtotime($dateEnd)) ?></p>
+                        <h2 style="text-transform: uppercase; font-weight: bold;">BÁO CÁO THỐNG KÊ - NLN FOOD</h2>
+                        <h4><?= $chartTitle ?></h4>
+                        <p style="font-size: 14px;">Từ ngày <strong><?= date('d/m/Y', strtotime($dateStart)) ?></strong> đến <strong><?= date('d/m/Y', strtotime($dateEnd)) ?></strong></p>
+                        <hr style="border: 2px solid #000; width: 50%; margin: 20px auto;">
                     </div>
 
                     <div class="row">
                         <div class="col-md-12 mb-4">
                             <div class="card">
-                                <div class="card-header bg-dark text-white">
+                                <div class="card-header bg-dark text-white d-print-none">
                                     <h5 class="card-title mb-0"><?= $chartTitle ?> (Biểu đồ)</h5>
                                 </div>
                                 <div class="card-body">
@@ -72,7 +84,7 @@
 
                         <div class="col-md-12">
                             <div class="card">
-                                <div class="card-header bg-secondary text-white">
+                                <div class="card-header bg-secondary text-white d-print-none">
                                     <h5 class="card-title mb-0">Dữ liệu chi tiết</h5>
                                 </div>
                                 <div class="card-body p-0">
@@ -110,6 +122,22 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Phần chữ ký cho in -->
+                    <div class="signature-section d-none d-print-block mt-5">
+                        <div class="row">
+                            <div class="col-6"></div>
+                            <div class="col-6 text-center">
+                                <p style="font-style: italic; margin-bottom: 5px;">
+                                    Ngày <?= date('d') ?> tháng <?= date('m') ?> năm <?= date('Y') ?>
+                                </p>
+                                <p style="font-weight: bold; margin-bottom: 80px;">NGƯỜI LẬP</p>
+                                <p style="font-weight: bold; text-decoration: underline;">
+                                    <?= isset($_SESSION['user_name']) ? htmlspecialchars($_SESSION['user_name']) : '.............................' ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             <?php elseif ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
                 <div class="alert alert-warning text-center">
@@ -123,20 +151,98 @@
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>
 
+<style>
+    @media print {
+        /* Ẩn các phần không cần thiết khi in */
+        .app-header, .app-sidebar, .app-content-header, 
+        .card-primary, .btn, .d-print-none {
+            display: none !important;
+        }
+
+        /* Hiển thị phần chỉ dành cho in */
+        .d-none.d-print-block {
+            display: block !important;
+        }
+
+        /* Định dạng cho trang in */
+        body {
+            background: white !important;
+        }
+
+        .app-main {
+            margin: 0 !important;
+            padding: 20px !important;
+        }
+
+        .card {
+            border: 1px solid #000 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+        }
+
+        .table {
+            font-size: 12px;
+        }
+
+        .table thead {
+            background-color: #333 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Đảm bảo biểu đồ được in */
+        canvas {
+            max-height: 350px !important;
+            page-break-inside: avoid;
+        }
+
+        /* Định dạng chữ ký */
+        .signature-section {
+            page-break-inside: avoid;
+            margin-top: 50px;
+        }
+    }
+
+    /* Style cho phần chữ ký */
+    .signature-section p {
+        margin: 0;
+        line-height: 1.5;
+    }
+</style>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    // 1. Cấu hình Biểu đồ
+    // 1. Hiển thị/Ẩn dropdown Top limit
+    const statTypeSelect = document.getElementById('stat-type');
+    const topLimitGroup = document.getElementById('topLimitGroup');
+
+    function toggleTopLimit() {
+        const selectedType = statTypeSelect.value;
+        if (selectedType === 'best-selling' || selectedType === 'top-customers') {
+            topLimitGroup.style.display = 'block';
+        } else {
+            topLimitGroup.style.display = 'none';
+        }
+    }
+
+    statTypeSelect.addEventListener('change', toggleTopLimit);
+    // Gọi khi trang load để hiển thị đúng
+    toggleTopLimit();
+
+    // 2. Cấu hình Biểu đồ
     <?php if (!empty($chartData['labels'])): ?>
+    let chartInstance = null;
     const ctx = document.getElementById('statChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar', // Có thể đổi thành 'line' nếu muốn biểu đồ đường
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
         data: {
             labels: <?= json_encode($chartData['labels']) ?>,
             datasets: [{
                 label: <?= json_encode($chartTitle) ?>,
                 data: <?= json_encode($chartData['values']) ?>,
-                backgroundColor: 'rgba(13, 110, 253, 0.7)', // Màu xanh Bootstrap
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
                 borderColor: 'rgba(13, 110, 253, 1)',
                 borderWidth: 1
             }]
@@ -149,20 +255,68 @@
             },
             plugins: {
                 legend: { position: 'top' }
+            },
+            animation: {
+                duration: 750
             }
         }
     });
     <?php endif; ?>
 
-    // 2. Cấu hình Nút In
+    // 3. Cấu hình Nút In với biểu đồ
     document.getElementById('printBTN').addEventListener('click', function() {
-        var printContents = document.getElementById('printableArea').innerHTML;
-        var originalContents = document.body.innerHTML;
-
-        // Tạo cửa sổ in đơn giản
-        document.body.innerHTML = printContents;
-        window.print();
-        document.body.innerHTML = originalContents;
-        location.reload(); // Load lại để phục hồi các sự kiện JS
+        if (chartInstance) {
+            // Chuyển biểu đồ thành hình ảnh trước khi in
+            const chartImage = chartInstance.toBase64Image();
+            const canvas = document.getElementById('statChart');
+            
+            // Lưu canvas gốc
+            const originalCanvas = canvas.cloneNode(true);
+            
+            // Tạo thẻ img từ biểu đồ
+            const img = document.createElement('img');
+            img.src = chartImage;
+            img.style.width = '100%';
+            img.style.maxHeight = '400px';
+            
+            // Thay thế canvas bằng img
+            canvas.parentNode.replaceChild(img, canvas);
+            
+            // In trang
+            setTimeout(() => {
+                window.print();
+                
+                // Khôi phục lại canvas sau khi in
+                img.parentNode.replaceChild(originalCanvas, img);
+                
+                // Tạo lại biểu đồ
+                const newCtx = originalCanvas.getContext('2d');
+                chartInstance = new Chart(newCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: <?= json_encode($chartData['labels'] ?? []) ?>,
+                        datasets: [{
+                            label: <?= json_encode($chartTitle ?? '') ?>,
+                            data: <?= json_encode($chartData['values'] ?? []) ?>,
+                            backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                            borderColor: 'rgba(13, 110, 253, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true }
+                        },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+            }, 500);
+        } else {
+            window.print();
+        }
     });
 </script>
