@@ -4,8 +4,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // ===============================================
     // KHAI BÁO CÁC BIẾN TOÀN CỤC
     // ===============================================
-    const apiHost = "https://provinces.open-api.vn/api/";
-    
+    const API_PROVINCE = "https://esgoo.net/api-tinhthanh/";
     // Các biến DOM Modal
     const modalOverlay = document.querySelector('#address-modal-overlay');
     const modalForm = document.querySelector('#form-address-modal');
@@ -176,25 +175,28 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 7. XỬ LÝ TĂNG/GIẢM VÀ TÍNH TIỀN GIỎ HÀNG (Giữ nguyên)
     function recalculateClientTotals() {
-        let subtotal = 0;
-        let totalDiscount = 0;
-        const cartTbody = document.querySelector('#cart-tbody');
-        if (!cartTbody) return; 
-        cartTbody.querySelectorAll('tr').forEach(row => {
-            const checkbox = row.querySelector('.cart-item-select');
-            if (checkbox && checkbox.checked) {
-                const originalSubtotal = parseFloat(row.dataset.subtotal);
-                const discountPercent = parseFloat(row.dataset.discountPercent);
-                const quantity = parseInt(row.querySelector('.quantity-field').value);
-                subtotal += originalSubtotal * quantity;
-                totalDiscount += (originalSubtotal * discountPercent / 100) * quantity;
-            }
-        });
-        let total = subtotal - totalDiscount;
-        document.querySelector('#cart-subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
-        document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
-        document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
-    }
+    let subtotal = 0;
+    let totalDiscount = 0;
+    const cartTbody = document.querySelector('#cart-tbody');
+    if (!cartTbody) return;
+
+    cartTbody.querySelectorAll('tr').forEach(row => {
+        const checkbox = row.querySelector('.cart-item-select');
+        if (checkbox && checkbox.checked) {
+            const unitPrice = parseFloat(row.dataset.subtotal);       // giá 1 sp
+            const discountPercent = parseFloat(row.dataset.discountPercent) || 0;
+            const quantity = parseInt(row.querySelector('.quantity-field').value) || 0;
+
+            subtotal += unitPrice * quantity;  // SỬA: nhân quantity
+            totalDiscount += (unitPrice * discountPercent / 100) * quantity;
+        }
+    });
+
+    let total = subtotal - totalDiscount;
+    document.querySelector('#cart-subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
+    document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
+    document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
+}
     
     function updateCart(id_hh, quantity) {
         const formData = new FormData();
@@ -212,12 +214,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 const itemRow = document.querySelector('#cart-item-' + id_hh);
                 if (itemRow) {
                     if (quantity > 0) {
-                        itemRow.querySelector('.cart-item-subtotal').textContent = data.itemSubtotal;
+                        // Cập nhật quantity field
+                        itemRow.querySelector('.quantity-field').value = quantity;
                     } else {
-                        itemRow.remove(); 
+                        itemRow.remove();
                     }
                 }
-                recalculateClientTotals(); 
+                recalculateClientTotals(); // Hàm này đã tính đúng rồi
             }
         })
         .catch(error => console.error('Lỗi AJAX:', error));
@@ -235,15 +238,15 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
     
-    document.querySelectorAll('.btn-remove-item').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault(); 
-            const id = this.href.split('/').pop(); 
-            if (confirm('Bé iu có chắc muốn xóa món này?')) {
-                updateCart(id, 0); 
-            }
-        });
+    document.querySelectorAll('.btn-remove').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const id = this.href.split('/').pop();
+        if (confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
+            updateCart(id, 0);
+        }
     });
+});
     
     document.querySelectorAll('.cart-item-select').forEach(checkbox => {
         checkbox.addEventListener('change', recalculateClientTotals);
@@ -266,60 +269,47 @@ document.addEventListener("DOMContentLoaded", function() {
     // ===============================================
 
     // Hàm tải Tỉnh
-    function loadProvinces(selectId, selectedCode = null) {
+    function loadProvinces(selectId) {
         const provinceSelect = document.querySelector(selectId);
         if (!provinceSelect) return;
-        
-        fetch(apiHost + "?depth=1")
+
+        fetch(API_PROVINCE + "1/0.htm")
             .then(res => res.json())
-            .then(data => {
+            .then(result => {
                 provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
-                data.forEach(province => {
-                    const option = new Option(province.name, province.code);
-                    if (province.code == selectedCode) option.selected = true;
-                    provinceSelect.options[provinceSelect.options.length] = option;
+                result.data.forEach(p => {
+                    provinceSelect.options.add(new Option(p.full_name, p.id));
                 });
             })
             .catch(err => console.error("Lỗi tải tỉnh:", err));
     }
 
-    // Hàm tải Huyện (khi Tỉnh thay đổi)
-    function attachDistrictListener(provinceId, districtId, wardId, hiddenNameFields = {}, selectedCode = null) {
+    function attachDistrictListener(provinceId, districtId, wardId, hiddenNameFields = {}) {
         const provinceSelect = document.querySelector(provinceId);
         const districtSelect = document.querySelector(districtId);
         const wardSelect = document.querySelector(wardId);
         if (!provinceSelect) return;
 
-        provinceSelect.addEventListener('change', function() {
-            // Reset Huyện & Xã
+        provinceSelect.addEventListener('change', function () {
             if (districtSelect) districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
             if (wardSelect) wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
-            
-            // Lưu tên Tỉnh vào input ẩn
+
             if (hiddenNameFields.province && document.querySelector(hiddenNameFields.province)) {
-                const selectedText = this.options[this.selectedIndex]?.text || '';
-                document.querySelector(hiddenNameFields.province).value = (this.value ? selectedText : '');
+                const text = this.options[this.selectedIndex]?.text || '';
+                document.querySelector(hiddenNameFields.province).value = this.value ? text : '';
             }
-            
-            // Reset tên Huyện & Xã ẩn
-            if (hiddenNameFields.district && document.querySelector(hiddenNameFields.district)) 
-                document.querySelector(hiddenNameFields.district).value = '';
-            if (hiddenNameFields.ward && document.querySelector(hiddenNameFields.ward)) 
-                document.querySelector(hiddenNameFields.ward).value = '';
+            if (hiddenNameFields.district) document.querySelector(hiddenNameFields.district).value = '';
+            if (hiddenNameFields.ward) document.querySelector(hiddenNameFields.ward).value = '';
 
             if (this.value) {
-                fetch(apiHost + "p/" + this.value + "?depth=2")
+                fetch(API_PROVINCE + "2/" + this.value + ".htm")
                     .then(res => res.json())
-                    .then(data => {
-                        if (districtSelect) {
-                            data.districts.forEach(district => {
-                                const option = new Option(district.name, district.code);
-                                if (district.code == selectedCode) option.selected = true;
-                                districtSelect.options[districtSelect.options.length] = option;
-                            });
-                            districtSelect.disabled = false;
-                            if (selectedCode) districtSelect.dispatchEvent(new Event('change'));
-                        }
+                    .then(result => {
+                        result.data.forEach(d => {
+                            const option = new Option(d.full_name, d.id);
+                            districtSelect.options[districtSelect.options.length] = option;
+                        });
+                        if (districtSelect) districtSelect.disabled = false;
                     })
                     .catch(err => console.error("Lỗi tải huyện:", err));
             } else {
@@ -329,37 +319,29 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Hàm tải Xã (khi Huyện thay đổi)
-    function attachWardListener(districtId, wardId, hiddenNameFields = {}, selectedCode = null) {
+    function attachWardListener(districtId, wardId, hiddenNameFields = {}) {
         const districtSelect = document.querySelector(districtId);
         const wardSelect = document.querySelector(wardId);
         if (!districtSelect) return;
 
-        districtSelect.addEventListener('change', function() {
+        districtSelect.addEventListener('change', function () {
             if (wardSelect) wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
-            
-            // Lưu tên Huyện
+
             if (hiddenNameFields.district && document.querySelector(hiddenNameFields.district)) {
-                const selectedText = this.options[this.selectedIndex]?.text || '';
-                document.querySelector(hiddenNameFields.district).value = (this.value ? selectedText : '');
+                const text = this.options[this.selectedIndex]?.text || '';
+                document.querySelector(hiddenNameFields.district).value = this.value ? text : '';
             }
-            // Reset tên Xã ẩn
-            if (hiddenNameFields.ward && document.querySelector(hiddenNameFields.ward)) 
-                document.querySelector(hiddenNameFields.ward).value = '';
+            if (hiddenNameFields.ward) document.querySelector(hiddenNameFields.ward).value = '';
 
             if (this.value) {
-                fetch(apiHost + "d/" + this.value + "?depth=2")
+                fetch(API_PROVINCE + "3/" + this.value + ".htm")
                     .then(res => res.json())
-                    .then(data => {
-                        if (wardSelect) {
-                            data.wards.forEach(ward => {
-                                const option = new Option(ward.name, ward.code);
-                                if (ward.code == selectedCode) option.selected = true;
-                                wardSelect.options[wardSelect.options.length] = option;
-                            });
-                            wardSelect.disabled = false;
-                            if (selectedCode) wardSelect.dispatchEvent(new Event('change'));
-                        }
+                    .then(result => {
+                        result.data.forEach(w => {
+                            const option = new Option(w.full_name, w.id);
+                            wardSelect.options[wardSelect.options.length] = option;
+                        });
+                        if (wardSelect) wardSelect.disabled = false;
                     })
                     .catch(err => console.error("Lỗi tải xã:", err));
             } else {
@@ -367,13 +349,12 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
-        // Sự kiện lưu tên Xã
         if (wardSelect && hiddenNameFields.ward) {
-            wardSelect.addEventListener('change', function() {
-                const inputHidden = document.querySelector(hiddenNameFields.ward);
-                if (inputHidden) {
-                    const selectedText = this.options[this.selectedIndex]?.text || '';
-                    inputHidden.value = (this.value ? selectedText : '');
+            wardSelect.addEventListener('change', function () {
+                const input = document.querySelector(hiddenNameFields.ward);
+                if (input) {
+                    const text = this.options[this.selectedIndex]?.text || '';
+                    input.value = this.value ? text : '';
                 }
             });
         }
@@ -433,91 +414,92 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Nút "Sửa" (Event Delegation - TỐI ƯU HƠN)
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-edit-address')) {
+        const btn = e.target.closest('.btn-edit-address');
+        if (btn) {
             e.preventDefault();
-            const addressId = e.target.dataset.id;
-            
-            // Gọi API lấy dữ liệu địa chỉ
-            fetch(BASE_PATH + '/account/getAddressJson/' + addressId)
-                .then(res => res.json())
-                .then(result => {
-                    if (result.success) {
-                        const addr = result.data;
-                        
-                        // 1. Điền các trường thông tin cơ bản
-                        document.querySelector('#modal_ho_ten').value = addr.TEN_NGUOI_NHAN;
-                        document.querySelector('#modal_sdt_gh').value = addr.SDT_GH;
-                        document.querySelector('#modal_dia_chi_chi_tiet').value = addr.DIA_CHI_CHI_TIET;
-                        document.querySelector('#modal_is_default').checked = (addr.IS_DEFAULT == 1);
-                        document.querySelector('#modal-address-id').value = addressId;
-                        
-                        // 2. Load Tỉnh/Thành phố
-                        return fetch(apiHost + "?depth=1")
-                            .then(res => res.json())
-                            .then(provinces => {
-                                const provinceSelect = document.querySelector("#province-modal");
-                                provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
-                                
-                                provinces.forEach(p => {
-                                    const option = new Option(p.name, p.code);
-                                    if (p.code == addr.ID_TINH_TP) option.selected = true;
-                                    provinceSelect.options.add(option);
-                                });
-                                
-                                // Cập nhật hidden input
-                                document.querySelector('#province-name-modal').value = addr.TEN_TINH_TP;
-                                
-                                // 3. Load Quận/Huyện
-                                return fetch(apiHost + "p/" + addr.ID_TINH_TP + "?depth=2");
-                            })
-                            .then(res => res.json())
-                            .then(data => {
-                                const districtSelect = document.querySelector("#district-modal");
-                                districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
-                                
-                                data.districts.forEach(d => {
-                                    const option = new Option(d.name, d.code);
-                                    if (d.code == addr.ID_QUAN_HUYEN) option.selected = true;
-                                    districtSelect.options.add(option);
-                                });
-                                districtSelect.disabled = false;
-                                
-                                // Cập nhật hidden input
-                                document.querySelector('#district-name-modal').value = addr.TEN_QUAN_HUYEN;
-                                
-                                // 4. Load Xã/Phường
-                                return fetch(apiHost + "d/" + addr.ID_QUAN_HUYEN + "?depth=2");
-                            })
-                            .then(res => res.json())
-                            .then(data => {
-                                const wardSelect = document.querySelector("#ward-modal");
-                                wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
-                                
-                                data.wards.forEach(w => {
-                                    const option = new Option(w.name, w.code);
-                                    if (w.code == addr.ID_XA_PHUONG) option.selected = true;
-                                    wardSelect.options.add(option);
-                                });
-                                wardSelect.disabled = false;
-                                
-                                // Cập nhật hidden input
-                                document.querySelector('#ward-name-modal').value = addr.TEN_XA_PHUONG;
-                            });
-                    } else {
-                        showToast('Không tìm thấy thông tin địa chỉ', 'error');
-                    }
-                })
-                .then(() => {
-                    // 5. Chuyển sang chế độ SỬA và hiện modal
-                    document.querySelector('#modal-title').textContent = 'Sửa địa chỉ';
-                    document.querySelector('#modal-submit-button').textContent = 'Cập nhật địa chỉ';
-                    document.querySelector('#form-address-modal').action = BASE_PATH + '/account/handleAddAddress';
-                    document.querySelector('#address-modal-overlay').style.display = 'flex';
-                })
-                .catch(err => {
-                    console.error('Lỗi load địa chỉ:', err);
-                    showToast('Lỗi khi tải dữ liệu địa chỉ!', 'error');
+
+            // Đọc data-* từ thẻ <a> trong profile.php
+            const addressId  = btn.dataset.id;
+            const provinceId = btn.dataset.province;
+            const districtId = btn.dataset.district;
+            const wardId     = btn.dataset.ward;
+
+            // Điền thông tin cơ bản
+            document.querySelector('#modal_ho_ten').value           = btn.dataset.name;
+            document.querySelector('#modal_sdt_gh').value           = btn.dataset.phone;
+            document.querySelector('#modal_dia_chi_chi_tiet').value = btn.dataset.detail;
+            document.querySelector('#modal_is_default').checked     = (btn.dataset.default == 1);
+            document.querySelector('#modal-address-id').value       = addressId;
+            // Load Tỉnh
+            fetch(API_PROVINCE + "1/0.htm")
+            .then(res => res.json())
+            .then(result => {
+
+                const provinceSelect = document.querySelector("#province-modal");
+                provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
+
+                result.data.forEach(p => {                      
+                    const option = new Option(p.full_name, p.id); 
+                    if (p.id == provinceId) option.selected = true;
+                    provinceSelect.options.add(option);
                 });
+
+                // ✅ Cập nhật hidden tỉnh
+                document.querySelector('#province-name-modal').value =
+                    provinceSelect.options[provinceSelect.selectedIndex]?.text || '';
+
+                return fetch(API_PROVINCE + "2/" + provinceId + ".htm"); 
+            })
+
+            .then(res => res.json())
+            .then(result => {
+
+                const districtSelect = document.querySelector("#district-modal");
+                districtSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+
+                result.data.forEach(d => {                      
+                    const option = new Option(d.full_name, d.id); 
+                    if (d.id == districtId) option.selected = true;
+                    districtSelect.options.add(option);
+                });
+
+                districtSelect.disabled = false;
+
+                // ✅ Cập nhật hidden huyện
+                document.querySelector('#district-name-modal').value =
+                    districtSelect.options[districtSelect.selectedIndex]?.text || '';
+
+                return fetch(API_PROVINCE + "3/" + districtId + ".htm"); 
+            })
+
+            .then(res => res.json())
+            .then(result => {
+
+                const wardSelect = document.querySelector("#ward-modal");
+                wardSelect.innerHTML = '<option value="">-- Chọn Xã/Phường --</option>';
+
+                result.data.forEach(w => {                      
+                    const option = new Option(w.full_name, w.id); 
+                    if (w.id == wardId) option.selected = true;
+                    wardSelect.options.add(option);
+                });
+
+                wardSelect.disabled = false;
+
+                // ✅ Cập nhật hidden xã
+                document.querySelector('#ward-name-modal').value =
+                    wardSelect.options[wardSelect.selectedIndex]?.text || '';
+
+                if (modalTitle) modalTitle.textContent = 'Sửa địa chỉ';
+                if (modalSubmitBtn) modalSubmitBtn.textContent = 'Cập nhật địa chỉ';
+                modalForm.action = BASE_PATH + '/account/handleAddAddress';
+                modalOverlay.style.display = 'flex';
+            })
+
+            .catch(err => {
+                console.error('Lỗi load địa chỉ:', err);
+                showToast('Lỗi khi tải dữ liệu địa chỉ!', 'error');
+            });
         }
     });
 
@@ -594,21 +576,17 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
     }
-
     // Xử lý nút Xóa địa chỉ
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('delete-address-btn')) {
+        const btn = e.target.closest('.delete-address-btn');
+        if (btn) {
             e.preventDefault();
-
-            const addressId = e.target.dataset.id;
-
+            const addressId = btn.dataset.id;
             if (confirm('Bạn có chắc muốn xóa địa chỉ này?')) {
                 window.location.href = BASE_PATH + '/account/deleteAddress/' + addressId;
             }
         }
     });
-
-
     // ===============================================
     // 12. XỬ LÝ AJAX CHO FORM "THÊM VÀO GIỎ" (TRANG CHI TIẾT)
     // ===============================================
@@ -723,7 +701,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
 /* =======================================================
  * HÀM HELPER: VẼ LẠI DANH SÁCH ĐỊA CHỈ (TRANG CHECKOUT)
- * (Đặt các hàm này ở ngoài cùng, cuối file)
  * ======================================================= */
 function updateAddressList(addresses) {
     const listElement = document.querySelector('.address-list-checkout');
@@ -734,7 +711,7 @@ function updateAddressList(addresses) {
     listElement.innerHTML = ''; 
     
     if (!addresses || addresses.length === 0) {
-        listElement.innerHTML = '<p style="color: red; font-weight: 600;">Bạn chưa có địa chỉ nào!</p><p>Vui lòng thêm địa chỉ mới.</p>';
+        listElement.innerHTML = '<p style="color:red;font-weight:600;">Bạn chưa có địa chỉ nào!</p><p>Vui lòng thêm địa chỉ mới.</p>';
         if (checkoutButton) {
             checkoutButton.disabled = true;
             checkoutButton.textContent = 'Vui lòng thêm địa chỉ';
@@ -742,46 +719,41 @@ function updateAddressList(addresses) {
         return;
     }
 
-    // Có địa chỉ -> Bật nút Đặt hàng
+    // Có địa chỉ -> bật nút đặt hàng
     if (checkoutButton) {
         checkoutButton.disabled = false;
         checkoutButton.textContent = 'ĐẶT HÀNG';
     }
 
-    // Kiểm tra xem có địa chỉ mặc định không
-    const hasDefault = addresses.some(a => a.IS_DEFAULT == 1);
+    // Kiểm tra địa chỉ mặc định
+    const hasDefault = addresses.some(a => a.mac_dinh == 1);
 
-    // Lặp và tạo HTML
     addresses.forEach((addr, index) => {
         let isChecked = false;
-        // Logic chọn radio: Ưu tiên mặc định, nếu không có thì chọn cái đầu tiên
+
         if (hasDefault) {
-            if (addr.IS_DEFAULT == 1) isChecked = true;
+            if (addr.mac_dinh == 1) isChecked = true;
         } else {
             if (index === 0) isChecked = true;
         }
 
-        const defaultTag = (addr.IS_DEFAULT == 1) ? '<span class="default-tag-small">Mặc định</span>' : '';
         const checkedAttr = isChecked ? 'checked' : '';
+        const defaultTag = (addr.mac_dinh == 1) ? '<span class="default-tag-small">Mặc định</span>' : '';
 
         const itemHtml = `
             <div class="form-group-radio">
                 <input type="radio" 
-                       id="addr_${addr.ID_DIA_CHI}" 
+                       id="addr_${addr.id_dc}" 
                        name="selected_address_id" 
-                       value="${addr.ID_DIA_CHI}"
-                       ${checkedAttr}
-                >
-                <label for="addr_${addr.ID_DIA_CHI}" class="radio-label">
-                    <strong>
-                        ${escapeHTML(addr.TEN_NGUOI_NHAN)}
-                        ${defaultTag}
-                    </strong><br>
-                    SĐT: ${escapeHTML(addr.SDT_GH)}<br>
-                    ĐC: ${escapeHTML(addr.DIA_CHI_CHI_TIET)}, 
-                        ${escapeHTML(addr.TEN_XA_PHUONG)}, 
-                        ${escapeHTML(addr.TEN_QUAN_HUYEN)}, 
-                        ${escapeHTML(addr.TEN_TINH_TP)}
+                       value="${addr.id_dc}"
+                       ${checkedAttr}>
+                <label for="addr_${addr.id_dc}" class="radio-label">
+                    <strong>${escapeHTML(addr.ten_nguoi_nhan)} ${defaultTag}</strong><br>
+                    SĐT: ${escapeHTML(addr.sdt_gh)}<br>
+                    ĐC: ${escapeHTML(addr.dia_chi_chi_tiet)}, 
+                        ${escapeHTML(addr.ten_xa_phuong)}, 
+                        ${escapeHTML(addr.ten_quan_huyen)}, 
+                        ${escapeHTML(addr.ten_tinh_tp)}
                 </label>
             </div>
         `;

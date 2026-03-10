@@ -76,16 +76,16 @@ if (isset($homeCategorySections) && !empty($homeCategorySections)):
 
     <div class="container">
         <section class="promo-banner">
-            <img src="<?php echo BASE_PATH; ?>/images/banner-<?php echo $categoryInfo['ID_DM']; ?>.jpg" 
-                 alt="<?php echo htmlspecialchars($categoryInfo['TEN_DM']); ?>" 
-                 style="width: 100%; border-radius: 8px;">
+            <img src="<?php echo BASE_PATH; ?>/images/banner-<?php echo $categoryInfo['id_dm']; ?>.jpg" 
+                alt="<?php echo htmlspecialchars($categoryInfo['ten_dm']); ?>" 
+                style="width: 100%; border-radius: 8px;">
         </section>
     </div>
 
     <div class="container">
         <section class="product-section">
             <h2 class="section-title green-title">
-                <?php echo htmlspecialchars($categoryInfo['TEN_DM']); ?>
+                <?php echo htmlspecialchars($categoryInfo['ten_dm']); ?>
             </h2>
             
             <div class="product-grid">
@@ -102,8 +102,8 @@ if (isset($homeCategorySections) && !empty($homeCategorySections)):
                 ?>
             </div>
             
-            <a href="<?php echo BASE_PATH; ?>/product/category/<?php echo $categoryInfo['ID_DM']; ?>" class="btn-view-more">
-                &lt;&lt;&lt;Xem thêm <?php echo htmlspecialchars(strtolower($categoryInfo['TEN_DM'])); ?> &gt;&gt;&gt;
+            <a href="<?php echo BASE_PATH; ?>/product/category/<?php echo $categoryInfo['id_dm']; ?>" class="btn-view-more">
+                &lt;&lt;&lt;Xem thêm <?php echo htmlspecialchars(strtolower($categoryInfo['ten_dm'])); ?> &gt;&gt;&gt;
             </a>
         </section>
     </div>

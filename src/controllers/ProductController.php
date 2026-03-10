@@ -19,19 +19,15 @@ class ProductController extends BaseController {
      * Xử lý tìm kiếm
      */
     public function search() {
-        // 1. Lấy từ khóa từ URL (ví dụ: ?q=Cá)
         $keyword = $_GET['q'] ?? '';
         
-        // 2. Gọi Model tìm kiếm
         $products = [];
         if (!empty($keyword)) {
             $products = $this->productModel->searchProducts($keyword);
         }
 
-        // 3. Lấy danh mục (để hiển thị Menu Sidebar nếu cần)
         $categories = $this->categoryModel->getAllCategories();
 
-        // 4. Hiển thị View kết quả
         $this->renderView('search/index', [
             'title' => 'Kết quả tìm kiếm: ' . $keyword,
             'products' => $products,
@@ -46,8 +42,12 @@ class ProductController extends BaseController {
         if (!$product) {
             echo "Sản phẩm không tồn tại!"; return;
         }
-        $categoryId = $product['ID_LHH']; 
-        $relatedProducts = $this->productModel->getRelatedProducts($productId, $categoryId, 6); 
+        
+        // SỬA TẠI ĐÂY: ID_LHH đổi thành id_loai2 (hoặc kiểm tra linh hoạt cả hai)
+        $productTypeId = $product['id_loai2'] ?? $product['ID_LHH'] ?? null; 
+        
+        $relatedProducts = $this->productModel->getRelatedProducts($productId, $productTypeId, 6); 
+        
         $data = [
             'product' => $product,
             'relatedProducts' => $relatedProducts
@@ -79,41 +79,34 @@ class ProductController extends BaseController {
      * Xử lý URL: /product/productType/{id_lhh}
      */
     public function productType($id_lhh) {
-        
-        // 1. Lấy thông tin về Loại Hàng Hóa (LHH) và Danh Mục (DM) cha
-        // (Cần hàm findProductTypeAndCategoryById trong CategoryModel)
         $typeInfo = $this->categoryModel->findProductTypeAndCategoryById($id_lhh);
 
         if (!$typeInfo) {
-            $this->redirect('/'); // Loại hàng hóa không tồn tại
+            $this->redirect('/');
             return;
         }
 
-        // 2. Lấy bộ lọc từ URL (giống hệt trang category)
         $filters = [
             'price' => $_GET['price'] ?? '',
             'sort' => $_GET['sort'] ?? 'name_asc'
         ];
 
-        // 3. Lấy sản phẩm (đã lọc)
-        // (Cần nâng cấp hàm getProductsByProductType trong ProductModel)
         $products = $this->productModel->getProductsByProductType($id_lhh, $filters);
 
-        // 4. Lấy các Loại Hàng Hóa "anh em" (để hiển thị sub-nav)
-        $subCategories = $this->categoryModel->getProductTypesByCategoryId($typeInfo['ID_DM']);
+        // SỬA TẠI ĐÂY: Sử dụng key chữ thường id_dm theo CSDL mới
+        $parentId = $typeInfo['id_dm'] ?? $typeInfo['id_dm'] ?? null;
+        $subCategories = $this->categoryModel->getProductTypesByCategoryId($parentId);
 
-        // 5. Chuẩn bị dữ liệu cho View
         $data = [
             'products' => $products,
-            'currentCategory' => [ // Thông tin DM cha
-                'TEN_DM' => $typeInfo['TEN_DM'],
-                'ID_DM' => $typeInfo['ID_DM']
+            'currentCategory' => [ 
+                'TEN_DM' => $typeInfo['ten_dm'] ?? $typeInfo['TEN_DM'] ?? '',
+                'ID_DM' => $parentId
             ],
-            'subCategories' => $subCategories, // Các LHH "anh em"
+            'subCategories' => $subCategories, 
             'filters' => $filters
         ];
 
-        // 6. Render LẠI view 'category.php' (quan trọng)
         $this->renderView('products/category', $data);
     }
 }

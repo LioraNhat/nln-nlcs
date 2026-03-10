@@ -11,14 +11,15 @@ class UserModel extends BaseModel {
     // 1. CÁC PHƯƠNG THỨC CƠ BẢN (LOGIN/REGISTER)
     // ============================================
 
+    // Sửa EMAIL -> EMAIL_TK
     public function findByEmail($email) {
-        $stmt = $this->db->prepare("SELECT tk.*, nd.PHAN_QUYEN_TK FROM tai_khoan tk INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND WHERE tk.EMAIL = ?");
+        $stmt = $this->db->prepare("SELECT tk.*, nd.phan_quyen_tk FROM tai_khoan tk INNER JOIN nguoi_dung nd ON tk.id_nd = nd.id_nd WHERE tk.email_tk = ?");
         $stmt->execute([$email]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function findByPhone($sdt) {
-        $stmt = $this->db->prepare("SELECT tk.*, nd.PHAN_QUYEN_TK FROM tai_khoan tk INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND WHERE tk.SDT_TK = ?");
+        $stmt = $this->db->prepare("SELECT tk.*, nd.phan_quyen_tk FROM tai_khoan tk INNER JOIN nguoi_dung nd ON tk.id_nd = nd.id_nd WHERE tk.sdt_tk = ?");
         $stmt->execute([$sdt]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -30,39 +31,34 @@ class UserModel extends BaseModel {
         } else {
             $user = $this->findByPhone($username);
         }
-        
-        if (!$user) { 
-            return false; 
-        }
-        
-        if (password_verify($password, $user['MAT_KHAU'])) {
+
+        if (!$user) return false;
+
+        // Hỗ trợ cả mật khẩu hash mới VÀ md5 cũ
+        if (password_verify($password, $user['mat_khau_tk'])) {
             return $user;
         }
-        
+        if ($user['mat_khau_tk'] === md5($password)) {
+            return $user;
+        }
+
         return false;
     }
 
     public function register($data) {
-        // Tạo ID ngẫu nhiên (Lưu ý: Nếu hàm generateNewId chưa có, dùng uniqid tạm)
         $id_tk = 'TK' . substr(uniqid(), 0, 13);
-        $id_gh = 'GH' . substr(uniqid(), -3);
+        $id_gh = 'GH' . substr(uniqid(), -2);
         $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-        
+
         try {
             $this->db->beginTransaction();
-            
-            // 1. Tạo giỏ hàng trước
-            $stmt_cart = $this->db->prepare("INSERT INTO gio_hang (ID_GH, ID_TK, NGAY_TAO_GH, NGAY_CAP_NHAT_GH) VALUES (?, NULL, NOW(), NOW())");
-            $stmt_cart->execute([$id_gh]);
-            
-            // 2. Tạo tài khoản
-            $stmt_user = $this->db->prepare("INSERT INTO tai_khoan (ID_TK, ID_GH, ID_ND, HO_TEN, GIOI_TINH, SDT_TK, EMAIL, MAT_KHAU, NGAY_GIO_TAO_TK, NGAY_GIO_CAP_NHAT) VALUES (?, ?, 'KH', ?, ?, ?, ?, ?, NOW(), NOW())");
-            $stmt_user->execute([$id_tk, $id_gh, $data['ho_ten'], $data['gioi_tinh'], $data['sdt_tk'], $data['email'], $hashedPassword]);
-            
-            // 3. Cập nhật lại ID_TK vào giỏ hàng
-            $stmt_update_cart = $this->db->prepare("UPDATE gio_hang SET ID_TK = ? WHERE ID_GH = ?");
-            $stmt_update_cart->execute([$id_tk, $id_gh]);
-            
+
+            $stmt_user = $this->db->prepare("INSERT INTO tai_khoan (id_tk, id_nd, ho_ten, gioi_tinh, sdt_tk, email_tk, mat_khau_tk, ngay_gio_tao_tk) VALUES (?, 'KH', ?, ?, ?, ?, ?, NOW())");
+            $stmt_user->execute([$id_tk, $data['ho_ten'], $data['gioi_tinh'], $data['sdt_tk'], $data['email'], $hashedPassword]);
+
+            $stmt_cart = $this->db->prepare("INSERT INTO gio_hang (id_gh, id_tk, ngay_tao_gh) VALUES (?, ?, NOW())");
+            $stmt_cart->execute([$id_gh, $id_tk]);
+
             $this->db->commit();
             return true;
         } catch (\Exception $e) {
@@ -71,58 +67,33 @@ class UserModel extends BaseModel {
         }
     }
 
-    /**
-     * Cập nhật thông tin cá nhân
-     */
+    public function changePassword($userId, $currentPassword, $newPassword) {
+        $stmt = $this->db->prepare("SELECT mat_khau_tk FROM tai_khoan WHERE id_tk = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) return "Tài khoản không tồn tại.";
+        if (!password_verify($currentPassword, $user['mat_khau_tk'])) return "Mật khẩu hiện tại không đúng.";
+
+        $newHashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        $updateStmt = $this->db->prepare("UPDATE tai_khoan SET mat_khau_tk = ? WHERE id_tk = ?");
+        if ($updateStmt->execute([$newHashedPassword, $userId])) return true;
+        return "Lỗi hệ thống, không thể đổi mật khẩu.";
+    }
+
     public function updateProfile($id, $hoTen, $sdt, $gioiTinh) {
         try {
-            $sql = "UPDATE tai_khoan 
-                    SET HO_TEN = ?, SDT_TK = ?, GIOI_TINH = ?, NGAY_GIO_CAP_NHAT = NOW() 
-                    WHERE ID_TK = ?";
-            
-            $stmt = $this->db->prepare($sql);
+            $stmt = $this->db->prepare("UPDATE tai_khoan SET ho_ten = ?, sdt_tk = ?, gioi_tinh = ? WHERE id_tk = ?");
             return $stmt->execute([$hoTen, $sdt, $gioiTinh, $id]);
-            
         } catch (\PDOException $e) {
             return false;
         }
     }
 
-    public function changePassword($userId, $currentPassword, $newPassword) {
-        $stmt = $this->db->prepare("SELECT MAT_KHAU FROM tai_khoan WHERE ID_TK = ?");
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$user) { 
-            return "Tài khoản không tồn tại."; 
-        }
-        
-        if (!password_verify($currentPassword, $user['MAT_KHAU'])) { 
-            return "Mật khẩu hiện tại không đúng."; 
-        }
-        
-        $newHashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-        $updateStmt = $this->db->prepare("UPDATE tai_khoan SET MAT_KHAU = ? WHERE ID_TK = ?");
-        
-        if ($updateStmt->execute([$newHashedPassword, $userId])) {
-            return true;
-        }
-        return "Lỗi hệ thống, không thể đổi mật khẩu.";
-    }
-
-    /**
-     * Cập nhật mật khẩu mới (HÀM BẠN ĐANG THIẾU)
-     * Hàm này chỉ nhận mật khẩu đã mã hóa và lưu vào DB
-     */
     public function updatePassword($id, $newPassHash) {
         try {
-            $sql = "UPDATE tai_khoan 
-                    SET MAT_KHAU = ?, NGAY_GIO_CAP_NHAT = NOW() 
-                    WHERE ID_TK = ?";
-            
-            $stmt = $this->db->prepare($sql);
+            $stmt = $this->db->prepare("UPDATE tai_khoan SET mat_khau_tk = ? WHERE id_tk = ?");
             return $stmt->execute([$newPassHash, $id]);
-            
         } catch (\PDOException $e) {
             return false;
         }
@@ -148,17 +119,14 @@ class UserModel extends BaseModel {
     public function countAllUsers($keyword = '') {
         $sql = "SELECT COUNT(*) as total FROM tai_khoan tk";
         $params = [];
-
         if (!empty($keyword)) {
-            $sql .= " WHERE (tk.ID_TK LIKE :keyword OR tk.HO_TEN LIKE :keyword 
-                      OR tk.EMAIL LIKE :keyword OR tk.SDT_TK LIKE :keyword)";
+            $sql .= " WHERE (tk.id_tk LIKE :keyword OR tk.ho_ten LIKE :keyword 
+                    OR tk.email_tk LIKE :keyword OR tk.sdt_tk LIKE :keyword)";
             $params[':keyword'] = '%' . $keyword . '%';
         }
-
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $result ? (int)$result['total'] : 0;
+        return (int)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
     }
 
     /**
@@ -166,43 +134,31 @@ class UserModel extends BaseModel {
      */
     public function getAllUsers($keyword = '', $limit = 20, $offset = 0) {
         $sql = "SELECT 
-                    tk.ID_TK,
-                    tk.HO_TEN,
-                    tk.DIA_CHI_AVT,
-                    tk.GIOI_TINH,
-                    tk.SDT_TK,
-                    tk.EMAIL,
-                    tk.NGAY_GIO_TAO_TK,
-                    tk.NGAY_GIO_CAP_NHAT,
-                    nd.ID_ND,
-                    nd.PHAN_QUYEN_TK,
-                    COUNT(DISTINCT dh.ID_DH) as TONG_DON_HANG,
-                    COALESCE(SUM(dh.SO_TIEN_THANH_TOAN), 0) as TONG_CHI_TIEU
+                    tk.id_tk, tk.ho_ten, tk.dia_chi_avt,
+                    tk.gioi_tinh, tk.sdt_tk, tk.email_tk,
+                    tk.ngay_gio_tao_tk,
+                    nd.id_nd, nd.phan_quyen_tk,
+                    COUNT(DISTINCT dh.id_dh) as tong_don_hang,
+                    COALESCE(SUM(dh.thanh_tien), 0) as tong_chi_tieu
                 FROM tai_khoan tk
-                INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND
-                LEFT JOIN don_hang dh ON tk.ID_TK = dh.ID_TK";
-        
+                INNER JOIN nguoi_dung nd ON tk.id_nd = nd.id_nd
+                LEFT JOIN don_hang dh ON tk.id_tk = dh.id_tk";
         $params = [];
-
         if (!empty($keyword)) {
-            $sql .= " WHERE (tk.ID_TK LIKE :keyword OR tk.HO_TEN LIKE :keyword 
-                      OR tk.EMAIL LIKE :keyword OR tk.SDT_TK LIKE :keyword)";
+            $sql .= " WHERE (tk.id_tk LIKE :keyword OR tk.ho_ten LIKE :keyword 
+                    OR tk.email_tk LIKE :keyword OR tk.sdt_tk LIKE :keyword)";
             $params[':keyword'] = '%' . $keyword . '%';
         }
-
-        $sql .= " GROUP BY tk.ID_TK, tk.HO_TEN, tk.GIOI_TINH, tk.SDT_TK, tk.EMAIL, 
-                  tk.NGAY_GIO_TAO_TK, tk.NGAY_GIO_CAP_NHAT, nd.ID_ND, nd.PHAN_QUYEN_TK
-                  ORDER BY tk.NGAY_GIO_TAO_TK DESC 
-                  LIMIT :limit OFFSET :offset";
-
+        $sql .= " GROUP BY tk.id_tk, tk.ho_ten, tk.gioi_tinh, tk.sdt_tk, 
+                tk.email_tk, tk.ngay_gio_tao_tk, nd.id_nd, nd.phan_quyen_tk
+                ORDER BY tk.ngay_gio_tao_tk DESC 
+                LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($sql);
-        
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
-
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -211,15 +167,7 @@ class UserModel extends BaseModel {
      * Lấy thông tin 1 người dùng (Dùng chung cho Admin và Check mật khẩu cũ)
      */
     public function getUserById($userId) {
-        // Query này lấy đủ thông tin cần thiết (bao gồm MAT_KHAU để check)
-        $sql = "SELECT 
-                    tk.*,
-                    nd.PHAN_QUYEN_TK
-                FROM tai_khoan tk
-                INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND
-                WHERE tk.ID_TK = ?";
-
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare("SELECT tk.*, nd.phan_quyen_tk FROM tai_khoan tk INNER JOIN nguoi_dung nd ON tk.id_nd = nd.id_nd WHERE tk.id_tk = ?");
         $stmt->execute([$userId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -229,12 +177,9 @@ class UserModel extends BaseModel {
     /**
      * Lấy danh sách địa chỉ giao hàng của User (Admin xem)
      */
+    // IS_DEFAULT đổi thành MAC_DINH
     public function getUserAddresses($userId) {
-        $sql = "SELECT * FROM dia_chi_giao_hang 
-                WHERE ID_TK = ? 
-                ORDER BY IS_DEFAULT DESC"; // Ưu tiên địa chỉ mặc định lên đầu
-        
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare("SELECT * FROM dia_chi_giao_hang WHERE id_tk = ? ORDER BY mac_dinh DESC");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -244,19 +189,15 @@ class UserModel extends BaseModel {
      */
     public function updateUserAddress($userId, $name, $phone, $addressDetail) {
         try {
-            // Kiểm tra xem user đã có địa chỉ mặc định chưa
             $current = $this->getUserAddresses($userId);
-            
             if ($current) {
-                // Nếu có rồi thì Update
                 $sql = "UPDATE dia_chi_giao_hang 
-                        SET DIA_CHI_CHI_TIET = ?, TEN_NGUOI_NHAN = ?, SDT_GH = ? 
-                        WHERE ID_DIA_CHI = ?";
+                        SET dia_chi_chi_tiet = ?, ten_nguoi_nhan = ?, sdt_gh = ? 
+                        WHERE id_dc = ?";
                 $stmt = $this->db->prepare($sql);
-                return $stmt->execute([$addressDetail, $name, $phone, $current['ID_DIA_CHI']]);
+                return $stmt->execute([$addressDetail, $name, $phone, $current[0]['id_dc']]);
             } else {
-                // Nếu chưa có thì Insert mới
-                $sql = "INSERT INTO dia_chi_giao_hang (ID_TK, TEN_NGUOI_NHAN, SDT_GH, DIA_CHI_CHI_TIET, IS_DEFAULT) 
+                $sql = "INSERT INTO dia_chi_giao_hang (id_tk, ten_nguoi_nhan, sdt_gh, dia_chi_chi_tiet, mac_dinh) 
                         VALUES (?, ?, ?, ?, 1)";
                 $stmt = $this->db->prepare($sql);
                 return $stmt->execute([$userId, $name, $phone, $addressDetail]);
@@ -270,56 +211,32 @@ class UserModel extends BaseModel {
      * Lấy đơn hàng của người dùng (Admin)
      */
     public function getUserOrders($userId, $limit = 10) {
-        $sql = "SELECT 
-                    dh.ID_DH,
-                    dh.NGAY_GIO_TAO_DON,
-                    dh.SO_TIEN_THANH_TOAN,
-                    dh.TRANG_THAI_THANH_TOAN,
-                    dht.TRANG_THAI_DHHT
+        $sql = "SELECT dh.id_dh, dh.ngay_gio_tao_don, dh.thanh_tien,
+                    dh.trang_thai_thanh_toan, dht.id_ttd
                 FROM don_hang dh
-                LEFT JOIN don_hang_hien_tai dht ON dh.ID_DH = dht.ID_DH
-                WHERE dh.ID_TK = ?
-                ORDER BY dh.NGAY_GIO_TAO_DON DESC
+                LEFT JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
+                WHERE dh.id_tk = ?
+                ORDER BY dh.ngay_gio_tao_don DESC
                 LIMIT :limit";
-
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(1, $userId);
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-
-    public function toggleUserStatus($userId, $status) {
-        // Giả sử bạn thêm cột TRANG_THAI vào bảng tai_khoan
-        $sql = "UPDATE tai_khoan SET TRANG_THAI = ? WHERE ID_TK = ?";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([$status, $userId]);
-    }
-
     /**
      * Xóa người dùng (Admin - Cẩn thận với Foreign Key)
      */
     public function deleteUser($userId) {
         try {
             $this->db->beginTransaction();
-            
-            // Xóa địa chỉ
-            $stmt1 = $this->db->prepare("DELETE FROM dia_chi_giao_hang WHERE ID_TK = ?");
-            $stmt1->execute([$userId]);
-            
-            // Xóa giỏ hàng (nếu không có ràng buộc ON DELETE CASCADE)
-            $stmt2 = $this->db->prepare("DELETE FROM gio_hang WHERE ID_TK = ?");
-            $stmt2->execute([$userId]);
-            
-            // Xóa tài khoản
-            $stmt3 = $this->db->prepare("DELETE FROM tai_khoan WHERE ID_TK = ?");
-            $stmt3->execute([$userId]);
-            
+            $this->db->prepare("DELETE FROM dia_chi_giao_hang WHERE id_tk = ?")->execute([$userId]);
+            $this->db->prepare("DELETE FROM gio_hang WHERE id_tk = ?")->execute([$userId]);
+            $this->db->prepare("DELETE FROM tai_khoan WHERE id_tk = ?")->execute([$userId]);
             $this->db->commit();
             return true;
         } catch (\Exception $e) {
             $this->db->rollBack();
-            error_log("UserModel::deleteUser Error: " . $e->getMessage());
             return false;
         }
     }
@@ -330,11 +247,11 @@ class UserModel extends BaseModel {
     public function adminUpdateCustomer($id, $data) {
         try {
             if (!empty($data['mat_khau'])) {
-                $sql = "UPDATE tai_khoan SET HO_TEN=?, SDT_TK=?, GIOI_TINH=?, EMAIL=?, MAT_KHAU=?, NGAY_GIO_CAP_NHAT=NOW() WHERE ID_TK=?";
+                $sql = "UPDATE tai_khoan SET ho_ten=?, sdt_tk=?, gioi_tinh=?, email_tk=?, mat_khau_tk=? WHERE id_tk=?";
                 $stmt = $this->db->prepare($sql);
                 return $stmt->execute([$data['ho_ten'], $data['sdt'], $data['gioi_tinh'], $data['email'], $data['mat_khau'], $id]);
             } else {
-                $sql = "UPDATE tai_khoan SET HO_TEN=?, SDT_TK=?, GIOI_TINH=?, EMAIL=?, NGAY_GIO_CAP_NHAT=NOW() WHERE ID_TK=?";
+                $sql = "UPDATE tai_khoan SET ho_ten=?, sdt_tk=?, gioi_tinh=?, email_tk=? WHERE id_tk=?";
                 $stmt = $this->db->prepare($sql);
                 return $stmt->execute([$data['ho_ten'], $data['sdt'], $data['gioi_tinh'], $data['email'], $id]);
             }
@@ -343,29 +260,23 @@ class UserModel extends BaseModel {
         }
     }
 
-    // ... (Các hàm cũ giữ nguyên) ...
 
     /**
      * HÀM MỚI: Lấy danh sách theo vai trò (Để tách KH và AD)
      * $roleId: 'KH' hoặc 'AD'
      */
     public function getUsersByRole($roleId, $search = '', $limit = 100, $offset = 0) {
-        $sql = "SELECT tk.*, nd.PHAN_QUYEN_TK 
-                FROM tai_khoan tk
-                INNER JOIN nguoi_dung nd ON tk.ID_ND = nd.ID_ND
-                WHERE tk.ID_ND = ?";
-        
+        $sql = "SELECT tk.*, nd.phan_quyen_tk FROM tai_khoan tk
+                INNER JOIN nguoi_dung nd ON tk.id_nd = nd.id_nd
+                WHERE tk.id_nd = ?";
         $params = [$roleId];
-
         if (!empty($search)) {
-            $sql .= " AND (tk.HO_TEN LIKE ? OR tk.EMAIL LIKE ? OR tk.SDT_TK LIKE ?)";
+            $sql .= " AND (tk.ho_ten LIKE ? OR tk.email_tk LIKE ? OR tk.sdt_tk LIKE ?)";
             $params[] = "%$search%";
             $params[] = "%$search%";
             $params[] = "%$search%";
         }
-
-        $sql .= " ORDER BY tk.NGAY_GIO_TAO_TK DESC LIMIT $limit OFFSET $offset";
-
+        $sql .= " ORDER BY tk.ngay_gio_tao_tk DESC LIMIT $limit OFFSET $offset";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -375,16 +286,14 @@ class UserModel extends BaseModel {
      * HÀM MỚI: Đếm số lượng theo vai trò (Để phân trang)
      */
     public function countUsersByRole($roleId, $search = '') {
-        $sql = "SELECT COUNT(*) as total FROM tai_khoan WHERE ID_ND = ?";
+        $sql = "SELECT COUNT(*) as total FROM tai_khoan WHERE id_nd = ?";
         $params = [$roleId];
-
         if (!empty($search)) {
-            $sql .= " AND (HO_TEN LIKE ? OR EMAIL LIKE ? OR SDT_TK LIKE ?)";
+            $sql .= " AND (ho_ten LIKE ? OR email_tk LIKE ? OR sdt_tk LIKE ?)";
             $params[] = "%$search%";
             $params[] = "%$search%";
             $params[] = "%$search%";
         }
-
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch(PDO::FETCH_ASSOC)['total'];
@@ -395,9 +304,7 @@ class UserModel extends BaseModel {
      */
     public function updateRole($userId, $newRoleId) {
         try {
-            // $newRoleId sẽ là 'AD' hoặc 'KH'
-            $sql = "UPDATE tai_khoan SET ID_ND = ? WHERE ID_TK = ?";
-            $stmt = $this->db->prepare($sql);
+            $stmt = $this->db->prepare("UPDATE tai_khoan SET id_nd = ? WHERE id_tk = ?");
             return $stmt->execute([$newRoleId, $userId]);
         } catch (\Exception $e) {
             return false;
@@ -413,12 +320,10 @@ class UserModel extends BaseModel {
             $year = date('Y');
         }
 
-        $sql = "SELECT 
-                    MONTH(NGAY_GIO_TAO_TK) as thang,
-                    COUNT(*) as so_luong
+        $sql = "SELECT MONTH(ngay_gio_tao_tk) as thang, COUNT(*) as so_luong
                 FROM tai_khoan
-                WHERE YEAR(NGAY_GIO_TAO_TK) = ?
-                GROUP BY MONTH(NGAY_GIO_TAO_TK)
+                WHERE YEAR(ngay_gio_tao_tk) = ?
+                GROUP BY MONTH(ngay_gio_tao_tk)
                 ORDER BY thang";
 
         $stmt = $this->db->prepare($sql);
@@ -430,20 +335,14 @@ class UserModel extends BaseModel {
      * Lấy top khách hàng chi tiêu nhiều nhất
      */
     public function getTopSpendingUsers($limit = 10) {
-        $sql = "SELECT 
-                    tk.ID_TK,
-                    tk.HO_TEN,
-                    tk.EMAIL,
-                    tk.SDT_TK,
-                    COUNT(DISTINCT dh.ID_DH) as TONG_DON_HANG,
-                    COALESCE(SUM(dh.SO_TIEN_THANH_TOAN), 0) as TONG_CHI_TIEU
+        $sql = "SELECT tk.id_tk, tk.ho_ten, tk.email_tk, tk.sdt_tk,
+                    COUNT(DISTINCT dh.id_dh) as tong_don_hang,
+                    COALESCE(SUM(dh.thanh_tien), 0) as tong_chi_tieu
                 FROM tai_khoan tk
-                LEFT JOIN don_hang dh ON tk.ID_TK = dh.ID_TK
-                GROUP BY tk.ID_TK, tk.HO_TEN, tk.EMAIL, tk.SDT_TK
-                HAVING TONG_CHI_TIEU > 0
-                ORDER BY TONG_CHI_TIEU DESC
+                LEFT JOIN don_hang dh ON tk.id_tk = dh.id_tk
+                GROUP BY tk.id_tk
+                ORDER BY tong_chi_tieu DESC
                 LIMIT :limit";
-
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->execute();

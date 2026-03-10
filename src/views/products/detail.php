@@ -1,6 +1,7 @@
 <?php 
 // 1. Tải Header (Full-width)
 require_once __DIR__ . '/../partials/header.php'; 
+// echo "<pre>"; print_r($product); echo "</pre>"; die();
 ?>
 
 <div class="container">
@@ -9,7 +10,7 @@ require_once __DIR__ . '/../partials/header.php';
         <div class="product-gallery">
             <div class="product-main-image">
                 <img src="<?php echo BASE_PATH; ?>/uploads/<?php echo htmlspecialchars($product['link_anh'] ?? 'default-image.png'); ?>" 
-                     alt="<?php echo htmlspecialchars($product['TEN_HH']); ?>" 
+                     alt="<?php echo htmlspecialchars($product['ten_hh']); ?>" 
                      style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
             </div>
         </div>
@@ -18,36 +19,44 @@ require_once __DIR__ . '/../partials/header.php';
             <?php 
             if (isset($product) && !empty($product)): 
             ?>
-                <h1><?php echo htmlspecialchars($product['TEN_HH']); ?></h1>
+                <h1><?php echo htmlspecialchars($product['ten_hh']); ?></h1>
                 
                 <div class="product-detail-price-wrapper">
-                    <?php if (isset($product['PHAN_TRAM_KM']) && $product['PHAN_TRAM_KM'] > 0): ?>
-                        <?php 
-                        // 1. Tính toán giá đã giảm
-                        $discountedPrice = $product['GIA_HIEN_TAI'] * (1 - $product['PHAN_TRAM_KM'] / 100);
-                        ?>
+                    <?php 
+                    $gia = (float)($product['gia_hien_tai'] ?? 0);
+                    $km = (float)($product['phan_tram_km'] ?? 0);
+                    ?>
+
+                    <?php if ($km > 0): ?>
+                        <?php $giaKM = $gia * (1 - $km / 100); ?>
                         <span class="product-detail-price-new">
-                            <?php echo number_format($discountedPrice); ?> đ
+                            <?php echo number_format($giaKM); ?> đ
                         </span>
                         <span class="product-detail-price-old">
-                            <?php echo number_format($product['GIA_HIEN_TAI']); ?> đ
+                            <?php echo number_format($gia); ?> đ
                         </span>
-                    <?php else: ?>
+
+                    <?php elseif ($gia > 0): ?>
                         <span class="product-detail-price-new">
-                            <?php echo number_format($product['GIA_HIEN_TAI']); ?> đ
+                            <?php echo number_format($gia); ?> đ
+                        </span>
+
+                    <?php else: ?>
+                        <span class="product-detail-price-new" style="color:#888;">
+                            Liên hệ để biết giá
                         </span>
                     <?php endif; ?>
                 </div>
                 <p class="product-stock">
-                    Tình trạng: <strong>Còn <?php echo (int)$product['SO_LUONG_TON_HH']; ?> sản phẩm</strong>
+                    Tình trạng: <strong>Còn <?php echo (int)$product['so_luong_ton_hh']; ?> sản phẩm</strong>
                 </p>
 
                 <form class="add-to-cart-form" action="<?php echo BASE_PATH; ?>/cart/add" method="POST">
-                    <input type="hidden" name="id_hh" value="<?php echo $product['ID_HH']; ?>">
+                    <input type="hidden" name="id_hh" value="<?php echo $product['id_hh']; ?>">
                     
                     <div class="quantity-selector">
                         <label for="quantity">Số lượng:</label>
-                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="<?php echo (int)$product['SO_LUONG_TON_HH']; ?>">
+                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="<?php echo (int)$product['so_luong_ton_hh']; ?>">
                     </div>
                     
                     <button type="submit" class="btn-add-to-cart">
@@ -63,7 +72,7 @@ require_once __DIR__ . '/../partials/header.php';
                         
                         <div class="accordion-content" style="max-height: 500px;"> 
                             <p>
-                                <?php echo nl2br(htmlspecialchars($product['MO_TA_HH'])); ?>
+                                <?php echo nl2br(htmlspecialchars($product['mo_ta_hh'])); ?>
                             </p>
                         </div>
                     </div>

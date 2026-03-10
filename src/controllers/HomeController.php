@@ -18,7 +18,7 @@ class HomeController extends BaseController {
         foreach ($homeCategories as $category) {
             $homeCategorySections[] = [
                 'info' => $category,
-                'products' => $productModel->getProductsByCategoryId($category['ID_DM'], 6)
+                'products' => $productModel->getProductsByCategoryId($category['id_dm'], [], 6, 0)
             ];
         }
 

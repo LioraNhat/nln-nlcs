@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NLN - Thực Phẩm Sạch</title>
+    <title>Thực Phẩm Sạch</title>
     <link rel="stylesheet" href="<?php echo BASE_PATH; ?>/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>const BASE_PATH ="<?php echo BASE_PATH; ?>";</script>
@@ -24,7 +24,7 @@
         </div>
         
         <a href="<?php echo BASE_PATH; ?>/" class="logo">
-            <img src="<?php echo BASE_PATH; ?>/images/logo-green-meal.png" alt="NLN Foods Logo" class="logo-image">
+            <img src="<?php echo BASE_PATH; ?>/images/logo-green-meal.png" alt="Foods Logo" class="logo-image">
         </a>
         
         <form class="search-bar" action="<?php echo BASE_PATH; ?>/search" method="GET">
@@ -40,10 +40,10 @@
                 
                 <a href="<?php echo BASE_PATH; ?>/account/index" class="header-icon-item">
                     <img src="<?php echo BASE_PATH; ?>/images/user-icon-2.png" alt="Tài khoản" class="header-main-icon">
-                    <span class="icon-label">Chào, <?php echo htmlspecialchars($_SESSION['user']['HO_TEN'] ?? 'Bạn'); ?></span> 
+                    <span class="icon-label">Chào, <?php echo htmlspecialchars($_SESSION['user']['ho_ten'] ?? 'Bạn'); ?></span> 
                 </a>
 
-                <?php if (isset($_SESSION['user']['ID_ND']) && $_SESSION['user']['ID_ND'] === 'AD'): ?>
+                <?php if (isset($_SESSION['user']['id_nd']) && $_SESSION['user']['id_nd'] === 'AD'): ?>
                     <a href="<?php echo BASE_PATH; ?>/admin/dashboard" class="header-icon-item admin-btn">
                         <i class="fa-solid fa-user-shield header-main-icon" style="font-size: 24px; color: #d32f2f;"></i>
                         <span class="icon-label" style="color: #d32f2f; font-weight: bold;">Quản trị</span>
@@ -86,9 +86,9 @@
         <?php if (isset($categories) && !empty($categories)): ?>
             <?php foreach ($categories as $category): ?>
                 <li>
-                    <a href="<?php echo BASE_PATH; ?>/product/category/<?php echo $category['ID_DM']; ?>">
+                    <a href="<?php echo BASE_PATH; ?>/product/category/<?php echo $category['id_dm']; ?>">
                         <i class="fa-solid fa-caret-right nav-category-icon" style="font-size: 14px; color: #888;"></i>
-                        <?php echo htmlspecialchars($category['TEN_DM']); ?>
+                        <?php echo htmlspecialchars($category['ten_dm']); ?>
                     </a>
                 </li>
             <?php endforeach; ?>
@@ -113,8 +113,8 @@
             <?php if (isset($categories) && !empty($categories)): 
                 foreach ($categories as $category): ?>
                 <li>
-                    <a href="<?php echo BASE_PATH; ?>/product/category/<?php echo $category['ID_DM']; ?>">
-                        <?php echo htmlspecialchars($category['TEN_DM']); ?>
+                    <a href="<?php echo BASE_PATH; ?>/product/category/<?php echo $category['id_dm']; ?>">
+                        <?php echo htmlspecialchars($category['ten_dm']); ?>
                     </a>
                 </li>
             <?php endforeach; endif; ?>

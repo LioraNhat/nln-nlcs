@@ -15,8 +15,8 @@
                         foreach ($categories as $category): 
                     ?>
                         <li>
-                            <a href="/NLN_NLCS/public/product/category/<?php echo $category['ID_DM']; ?>">
-                                <?php echo htmlspecialchars($category['TEN_DM']); ?>
+                            <a href="/NLN_NLCS/public/product/category/<?php echo $category['id_dm']; ?>">
+                                <?php echo htmlspecialchars($category['ten_dm']); ?>
                             </a>
                         </li>
                     <?php 

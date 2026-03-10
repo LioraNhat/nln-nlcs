@@ -111,7 +111,7 @@ abstract class BaseController {
         }
 
         // Sử dụng BASE_PATH đã define ở index.php
-        $base = defined('BASE_PATH') ? BASE_PATH : '/NLN_NLCS/public'; // Fallback an toàn
+        $base = defined('BASE_PATH') ? BASE_PATH : '/luanvan/public'; // Fallback an toàn
         header('Location: ' . $base . $path);
         exit;
     }
@@ -126,8 +126,8 @@ abstract class BaseController {
      * Dựa trên CSDL: ID_ND = 'AD' (Admin) hoặc 'KH' (Khách hàng)
      */
     protected function getRole() {
-        if ($this->isLoggedIn() && isset($_SESSION['user']['ID_ND'])) {
-            return $_SESSION['user']['ID_ND'];
+        if ($this->isLoggedIn() && isset($_SESSION['user']['id_nd'])) {
+            return $_SESSION['user']['id_nd']; // thường thay vì ID_ND
         }
         return 'guest';
     }
@@ -139,10 +139,8 @@ abstract class BaseController {
     }
 
     protected function checkAdmin() {
-        // Kiểm tra: Phải đăng nhập VÀ ID_ND phải là 'AD'
         if (!$this->isLoggedIn() || $this->getRole() !== 'AD') {
             $_SESSION['error'] = "Bạn không có quyền truy cập trang quản trị!";
-            // Nếu chưa đăng nhập thì về login, nếu là khách thì về trang chủ
             if (!$this->isLoggedIn()) {
                 $this->redirect('/auth/login');
             } else {

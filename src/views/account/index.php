@@ -49,37 +49,59 @@ require_once __DIR__ . '/../partials/header.php';
                 <?php else: ?>
                     <?php foreach ($orders as $index => $order): ?>
                         <?php 
-                            // KHAI BÁO BIẾN $STATUS NGAY ĐẦU VÒNG LẶP ĐỂ DÙNG CHO TOÀN BỘ HÀNG (TRÁNH LỖI UNDEFINED)
-                            $status = htmlspecialchars($order['TRANG_THAI_DHHT'] ?? 'Chờ xử lý'); 
+                            $status = $order['ten_trang_thai'] ?? 'Chờ xử lý';
                         ?>
                         <tr>
                             <td><?php echo $offset + $index + 1; ?></td>
-                            <td><?php echo date('Y-m-d H:i', strtotime($order['NGAY_GIO_TAO_DON'])); ?></td>
-                            <td><?php echo htmlspecialchars($order['ID_DH']); ?></td>
-                            <td><?php echo number_format($order['SO_TIEN_THANH_TOAN']); ?> đ</td>
+
+                            <td>
+                                <?php echo date('Y-m-d H:i', strtotime($order['ngay_gio_tao_don'])); ?>
+                            </td>
+
+                            <td>
+                                <?php echo htmlspecialchars($order['id_dh']); ?>
+                            </td>
+
+                            <td>
+                                <?php echo number_format($order['thanh_tien']); ?> đ
+                            </td>
                             
                             <td>
                                 <span class="status-badge">
-                                    <?php echo $status; ?>
+                                    <?php echo htmlspecialchars($status); ?>
                                 </span>
                             </td>
 
                             <td>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <a href="<?php echo BASE_PATH; ?>/account/orderDetail/<?php echo $order['ID_DH']; ?>" class="btn-view-order" style="text-decoration: none; color: #007bff; font-weight: bold;">
+                                <div style="display:flex; gap:10px; align-items:center;">
+
+                                    <a href="<?php echo BASE_PATH; ?>/account/orderDetail/<?php echo $order['id_dh']; ?>" 
+                                       class="btn-view-order"
+                                       style="text-decoration:none;color:#007bff;font-weight:bold;">
                                         Xem
                                     </a>
 
-                                    <?php if ($status === 'Chờ xử lý'): ?>
-                                        <form action="<?php echo BASE_PATH; ?>/account/cancel-order" method="POST" onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này?');" style="margin: 0;">
-                                            <input type="hidden" name="id_dh" value="<?php echo $order['ID_DH']; ?>">
-                                            <button type="submit" class="btn-cancel-order" style="color: red; border: none; background: none; cursor: pointer; font-weight: bold;">Hủy</button>
+                                    <?php if ($order['id_ttd'] === 'TTD01'): ?>
+                                        <form action="<?php echo BASE_PATH; ?>/account/cancel-order" 
+                                              method="POST"
+                                              onsubmit="return confirm('Bạn có chắc muốn hủy đơn hàng này?');"
+                                              style="margin:0;">
+
+                                            <input type="hidden" name="id_dh" value="<?php echo $order['id_dh']; ?>">
+
+                                            <button type="submit"
+                                                    class="btn-cancel-order"
+                                                    style="color:red;border:none;background:none;cursor:pointer;font-weight:bold;">
+                                                Hủy
+                                            </button>
                                         </form>
                                     <?php else: ?>
-                                        <span style="color: #aaa;">--</span>
+                                        <span style="color:#aaa;">--</span>
                                     <?php endif; ?>
+
                                 </div>
                             </td>
+
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -87,7 +109,7 @@ require_once __DIR__ . '/../partials/header.php';
         </table>
     </div>
 
-    </div>
+</div>
 
 <?php 
 require_once __DIR__ . '/../partials/footer.php'; 

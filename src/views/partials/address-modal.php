@@ -17,13 +17,13 @@ $currentUser = $_SESSION['user'] ?? [];
             <div class="form-group">
                 <label for="modal_ho_ten">Họ và Tên người nhận:</label>
                 <input type="text" id="modal_ho_ten" name="ten_nguoi_nhan" 
-                       value="<?php echo htmlspecialchars($currentUser['HO_TEN'] ?? ''); ?>" required>
+                       value="<?php echo htmlspecialchars($currentUser['ho_ten'] ?? ''); ?>" required>
             </div>
 
             <div class="form-group">
                 <label for="modal_sdt_gh">Số điện thoại nhận hàng:</label>
                 <input type="tel" id="modal_sdt_gh" name="sdt_gh" 
-                       value="<?php echo htmlspecialchars($currentUser['SDT_TK'] ?? ''); ?>" required>
+                       value="<?php echo htmlspecialchars($currentUser['sdt_tk'] ?? ''); ?>" required>
             </div>
 
             <div class="form-group">

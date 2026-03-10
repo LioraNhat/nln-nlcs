@@ -62,7 +62,7 @@ class AccountController extends BaseController {
         $items = $orderModel->getOrderItems($id);
 
         // Kiểm tra xem đơn hàng có thuộc về user đang đăng nhập không (Bảo mật)
-        if (!$order || $order['ID_TK'] !== $_SESSION['user']['ID_TK']) {
+        if (!$order || $order['id_tk'] !== $_SESSION['user']['id_tk']) {
             $_SESSION['error'] = "Không tìm thấy đơn hàng hoặc bạn không có quyền xem.";
             $this->redirect('/account/index');
         }
@@ -231,7 +231,7 @@ class AccountController extends BaseController {
     public function handleUpdateProfile() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Lấy dữ liệu từ Form
-            $userId = $_SESSION['user']['ID_TK'];
+            $userId = $_SESSION['user']['id_tk'];
             $hoTen = $_POST['ho_ten'];
             $sdt = $_POST['sdt_tk'];
             $gioiTinh = $_POST['gioi_tinh'];
@@ -241,9 +241,9 @@ class AccountController extends BaseController {
 
             if ($result) {
                 // QUAN TRỌNG: Cập nhật lại Session ngay lập tức để hiển thị đúng trên Header/Profile
-                $_SESSION['user']['HO_TEN'] = $hoTen;
-                $_SESSION['user']['SDT_TK'] = $sdt;
-                $_SESSION['user']['GIOI_TINH'] = $gioiTinh;
+                $_SESSION['user']['ho_ten'] = $hoTen;
+                $_SESSION['user']['sdt_tk'] = $sdt;
+                $_SESSION['user']['gioi_tinh'] = $gioiTinh;
                 
                 $_SESSION['success'] = 'Cập nhật thông tin thành công!';
             } else {
@@ -260,7 +260,7 @@ class AccountController extends BaseController {
      */
     public function handleChangePassword() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $userId = $_SESSION['user']['ID_TK'];
+            $userId = $_SESSION['user']['id_tk'];
             $currentPass = $_POST['current_password'];
             $newPass = $_POST['new_password'];
             $confirmPass = $_POST['new_password_confirm'];
@@ -273,7 +273,6 @@ class AccountController extends BaseController {
             }
 
             // 2. Lấy thông tin user để kiểm tra mật khẩu cũ
-            // Lưu ý: Dùng hàm getUserById trong UserModel để lấy MAT_KHAU
             $user = $this->userModel->getUserById($userId);
 
             if (!$user) {
@@ -283,7 +282,7 @@ class AccountController extends BaseController {
             }
 
             // 3. Kiểm tra mật khẩu cũ (Quan trọng)
-            if (!password_verify($currentPass, $user['MAT_KHAU'])) {
+            if (!password_verify($currentPass, $user['mat_khau_tk'])) {
                 $_SESSION['error'] = 'Mật khẩu hiện tại không đúng.'; // Dòng này sẽ hiện lên View sau khi sửa Bước 1
                 $this->redirect('/account/profile');
                 return;
@@ -309,7 +308,10 @@ class AccountController extends BaseController {
     public function getAddressJson($addressId) {
         $userId = Auth::id();
         $address = $this->addressModel->findAddressById($userId, $addressId);
-        
+        // DEBUG - xóa sau khi fix
+    // error_log("addressId: " . $addressId);
+    // error_log("userId: " . $userId);
+    // error_log("address: " . json_encode($address));
         header('Content-Type: application/json');
         if ($address) {
             echo json_encode(['success' => true, 'data' => $address]);

@@ -6,13 +6,13 @@ require_once __DIR__ . '/../partials/header.php';
     <div class="container">
         <ul>
             <li>
-                <span><?php echo htmlspecialchars($currentCategory['TEN_DM']); ?>:</span>
+                <span><?php echo htmlspecialchars($currentCategory['ten_dm']); ?>:</span>
             </li>
             
             <?php foreach($subCategories as $sub): ?>
                 <li>
-                    <a href="<?php echo BASE_PATH; ?>/product/productType/<?php echo $sub['ID_LHH']; ?>">
-                        <?php echo htmlspecialchars($sub['TEN_LHH']); ?>
+                    <a href="<?php echo BASE_PATH; ?>/product/productType/<?php echo $sub['id_loai2']; ?>">
+                        <?php echo htmlspecialchars($sub['ten_loai']); ?>
                     </a>
                 </li>
             <?php endforeach; ?>

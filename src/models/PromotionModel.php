@@ -13,105 +13,133 @@ class PromotionModel extends BaseModel {
         $params = [];
 
         if (!empty($search)) {
-            $sql .= " WHERE TEN_KM LIKE ? OR ID_KM LIKE ?";
+            $sql .= " WHERE ten_km LIKE ? OR id_km LIKE ?";
             $params[] = "%$search%";
             $params[] = "%$search%";
         }
 
-        $sql .= " ORDER BY ID_KM DESC";
+        $sql .= " ORDER BY id_km DESC";
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+
     // Lấy 1 khuyến mãi theo ID
     public function getPromotionById($id) {
-        $stmt = $this->db->prepare("SELECT * FROM khuyen_mai WHERE ID_KM = ?");
+        $stmt = $this->db->prepare("SELECT * FROM khuyen_mai WHERE id_km = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Thêm mới (Tự sinh mã KMxxx)
+
+    // Thêm mới khuyến mãi (tự sinh mã KM001...)
     public function createPromotion($data) {
-        // 1. Sinh ID tự động (KM001, KM002...)
-        $stmt = $this->db->query("SELECT MAX(ID_KM) as max_id FROM khuyen_mai");
+
+        $stmt = $this->db->query("SELECT MAX(id_km) as max_id FROM khuyen_mai");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $maxId = $row['max_id'];
 
         if ($maxId) {
-            $num = (int)substr($maxId, 2); // Lấy số sau chữ KM
-            $newNum = $num + 1;
-            $newId = 'KM' . str_pad($newNum, 3, '0', STR_PAD_LEFT); // 3 số (001)
+            $num = (int)substr($maxId, 2);
+            $newId = 'KM' . str_pad($num + 1, 3, '0', STR_PAD_LEFT);
         } else {
             $newId = 'KM001';
         }
 
-        // 2. Thêm vào DB
         try {
-            $sql = "INSERT INTO khuyen_mai (ID_KM, TEN_KM, PHAN_TRAM_KM, NGAY_BD_KM, NGAY_KT_KM, TRANG_THAI_KM) 
+            $sql = "INSERT INTO khuyen_mai 
+                    (id_km, ten_km, phan_tram_km, ngay_bd_km, ngay_kt_km, trang_thai_km) 
                     VALUES (?, ?, ?, ?, ?, ?)";
+
             $stmt = $this->db->prepare($sql);
+
             return $stmt->execute([
-                $newId, 
-                $data['ten_km'], 
-                $data['phan_tram_km'], 
-                $data['ngay_bd'], 
-                $data['ngay_kt'], 
+                $newId,
+                $data['ten_km'],
+                $data['phan_tram_km'],
+                $data['ngay_bd'],
+                $data['ngay_kt'],
                 $data['trang_thai']
             ]);
+
         } catch (\PDOException $e) {
             return false;
         }
     }
 
-    // Cập nhật
+
+    // Cập nhật khuyến mãi
     public function updatePromotion($id, $data) {
+
         try {
+
             $sql = "UPDATE khuyen_mai 
-                    SET TEN_KM = ?, PHAN_TRAM_KM = ?, NGAY_BD_KM = ?, NGAY_KT_KM = ?, TRANG_THAI_KM = ? 
-                    WHERE ID_KM = ?";
+                    SET ten_km = ?, 
+                        phan_tram_km = ?, 
+                        ngay_bd_km = ?, 
+                        ngay_kt_km = ?, 
+                        trang_thai_km = ? 
+                    WHERE id_km = ?";
+
             $stmt = $this->db->prepare($sql);
+
             return $stmt->execute([
-                $data['ten_km'], 
-                $data['phan_tram_km'], 
-                $data['ngay_bd'], 
-                $data['ngay_kt'], 
+                $data['ten_km'],
+                $data['phan_tram_km'],
+                $data['ngay_bd'],
+                $data['ngay_kt'],
                 $data['trang_thai'],
                 $id
             ]);
+
         } catch (\PDOException $e) {
             return false;
         }
     }
 
-    // Xóa (Có kiểm tra ràng buộc với Hàng hóa)
+
+    // Xóa khuyến mãi
     public function deletePromotion($id) {
-        // Kiểm tra xem có sản phẩm nào đang dùng mã KM này không
-        $stmtCheck = $this->db->prepare("SELECT COUNT(*) as count FROM hang_hoa WHERE ID_KM = ?");
+
+        // Khuyến mãi liên kết với bảng lo_hang
+        $stmtCheck = $this->db->prepare("SELECT COUNT(*) as count FROM lo_hang WHERE id_km = ?");
         $stmtCheck->execute([$id]);
+
         $row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
         if ($row['count'] > 0) {
-            return false; // Không cho xóa
+            return false;
         }
 
         try {
-            $stmt = $this->db->prepare("DELETE FROM khuyen_mai WHERE ID_KM = ?");
+            $stmt = $this->db->prepare("DELETE FROM khuyen_mai WHERE id_km = ?");
             return $stmt->execute([$id]);
         } catch (\PDOException $e) {
             return false;
         }
     }
 
-    // --- 4. HÀM ÁP DỤNG KM CHO LOẠI HÀNG (THÊM MỚI) ---
+
+    // Áp dụng khuyến mãi cho loại hàng
     public function applyPromotionToCategory($promoId, $categoryId) {
+
         try {
-            // Cập nhật ID_KM cho tất cả sản phẩm thuộc Loại hàng hóa này
-            $sql = "UPDATE hang_hoa SET ID_KM = ? WHERE ID_LHH = ?";
+
+            $sql = "UPDATE lo_hang l
+                    INNER JOIN hang_hoa h ON l.id_hh = h.id_hh
+                    SET l.id_km = ?
+                    WHERE h.id_loai2 = ?";
+
             $stmt = $this->db->prepare($sql);
+
             return $stmt->execute([$promoId, $categoryId]);
+
         } catch (\PDOException $e) {
             return false;
         }
     }
+
 }

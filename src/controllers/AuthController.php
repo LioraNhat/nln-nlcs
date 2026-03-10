@@ -25,52 +25,47 @@ class AuthController extends BaseController {
      * SỬA: Xử lý POST từ form đăng nhập (dùng SĐT/Email)
      */
     public function handleLogin() {
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            
             $username = $_POST['username'];
             $password = $_POST['password'];
-            $user = $this->userModel->login($username, $password); 
-            
-            if ($user) {
-                // ĐĂNG NHẬP THÀNH CÔNG
-                $_SESSION['user_id'] = $user['ID_TK'];
-                $_SESSION['user_name'] = $user['HO_TEN'];
-                $_SESSION['user_email'] = $user['EMAIL'];
-                $_SESSION['user_phone'] = $user['SDT_TK'];
-                $_SESSION['user_gender'] = $user['GIOI_TINH'];
-                $_SESSION['cart_id'] = $user['ID_GH'];
-                $_SESSION['user_role_id'] = $user['ID_ND'];
-                $_SESSION['user_role'] = $user['PHAN_QUYEN_TK'];
-                $_SESSION['user'] = $user;
+            $user = $this->userModel->login($username, $password);
 
-                // Logic phân quyền
-                if ($user['ID_ND'] === 'AD') {
+            if ($user) {
+                $cartModel = new CartModel();
+
+                // Lấy giỏ hàng của user
+                $ghInfo = $cartModel->getCartByUserId($user['id_tk']);
+                $id_gh = $ghInfo['id_gh'] ?? null;
+
+                $_SESSION['user'] = [
+                    'id_tk'         => $user['id_tk'],
+                    'id_nd'         => $user['id_nd'],
+                    'ho_ten'        => $user['ho_ten'],
+                    'email_tk'      => $user['email_tk'],
+                    'sdt_tk'        => $user['sdt_tk'],
+                    'gioi_tinh'     => $user['gioi_tinh'],
+                    'phan_quyen_tk' => $user['phan_quyen_tk'],
+                    'id_gh'         => $id_gh,
+                ];
+
+                if ($user['id_nd'] === 'AD') {
                     $this->redirect('/admin/dashboard');
                 } else {
-                    // ===============================================
-                    // BƯỚC 3: GỘP GIỎ HÀNG (CODE SẠCH)
-                    // ===============================================
-                    $cartModel = new CartModel(); // Luôn cần CartModel
-                    if (!empty($_SESSION['cart'])) {
-                        $cartModel->mergeSessionCartToDb($user['ID_GH'], $_SESSION['cart']);
-                        unset($_SESSION['cart']); 
+                    // Gộp giỏ hàng session vào DB
+                    if (!empty($_SESSION['cart']) && $id_gh) {
+                        $cartModel->mergeSessionCartToDb($id_gh, $_SESSION['cart']);
+                        unset($_SESSION['cart']);
                     }
-                    
-                    // ===============================================
-                    // SỬA LỖI ICON: TẠO SESSION COUNT KHI ĐĂNG NHẬP
-                    // ===============================================
-                    // Lấy tổng số lượng TỪ CSDL sau khi gộp
-                    $_SESSION['cart_count'] = $cartModel->getCartItemCountForUser($user['ID_GH']);
-                    // ===============================================
-                    
-                    $this->redirect('/'); 
+                    $_SESSION['cart_count'] = $id_gh 
+                        ? $cartModel->getCartItemCountForUser($id_gh) 
+                        : 0;
+                    $this->redirect('/');
                 }
             } else {
-                $this->renderView('auth/login', ['error' => 'Email/SĐT hoặc mật khẩu không đúng.']); 
+                $this->renderView('auth/login', ['error' => 'Email/SĐT hoặc mật khẩu không đúng.']);
             }
         } else {
-            $this->redirect('/auth/login'); 
+            $this->redirect('/auth/login');
         }
     }
 

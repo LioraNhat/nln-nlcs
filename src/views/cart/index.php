@@ -45,7 +45,7 @@ require_once __DIR__ . '/../partials/header.php';
                                     </td>
 
                                     <td class="cart-item-image">
-                                        <img src="<?php echo BASE_PATH; ?>/uploads/<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>">
+                                        <img src="<?php echo BASE_PATH; ?>/uploads/<?php echo htmlspecialchars($item['image'] ?? 'default-image.png'); ?>" alt="<?php echo htmlspecialchars($item['name'] ?? ''); ?>">
                                     </td>
                                     <td class="cart-item-name">
                                         <a href="<?php echo BASE_PATH; ?>/product/detail/<?php echo $item['id']; ?>">
@@ -132,3 +132,27 @@ require_once __DIR__ . '/../partials/header.php';
 <?php 
 require_once __DIR__ . '/../partials/footer.php'; 
 ?>
+
+<script>
+// Tính tổng ngay khi load trang từ PHP data (không cần đọc DOM)
+document.addEventListener('DOMContentLoaded', function() {
+    let subtotal = 0;
+    let totalDiscount = 0;
+    
+    <?php foreach ($cartItems as $item): 
+        $price = (float)($item['price'] ?? 0);
+        $discount = (float)($item['discount_percent'] ?? 0);
+        $qty = (int)($item['quantity'] ?? 0);
+        $itemSubtotal = $price * $qty;
+        $itemDiscount = ($price * $discount / 100) * $qty;
+    ?>
+        subtotal += <?php echo $itemSubtotal; ?>;
+        totalDiscount += <?php echo $itemDiscount; ?>;
+    <?php endforeach; ?>
+    
+    let total = subtotal - totalDiscount;
+    document.querySelector('#cart-subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
+    document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
+    document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
+});
+</script>

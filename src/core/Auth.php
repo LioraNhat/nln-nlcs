@@ -27,23 +27,15 @@ class Auth {
      * Lấy ID user (ID_TK)
      */
     public static function id() {
-        // Lấy từ mảng user hoặc lấy từ session lẻ đều được
-        return $_SESSION['user_id'] ?? ($_SESSION['user']['ID_TK'] ?? null);
+        return $_SESSION['user']['id_tk'] ?? null;
     }
-    
-    /**
-     * Kiểm tra có phải Admin không
-     */
+
     public static function isAdmin() {
-        // Kiểm tra key ID_ND trong mảng user
-        return self::check() && isset($_SESSION['user']['ID_ND']) && $_SESSION['user']['ID_ND'] === 'AD';
+        return self::check() && isset($_SESSION['user']['id_nd']) && $_SESSION['user']['id_nd'] === 'AD';
     }
-    
-    /**
-     * Kiểm tra có phải Khách hàng không
-     */
+
     public static function isCustomer() {
-        return self::check() && isset($_SESSION['user']['ID_ND']) && $_SESSION['user']['ID_ND'] === 'KH';
+        return self::check() && isset($_SESSION['user']['id_nd']) && $_SESSION['user']['id_nd'] === 'KH';
     }
     
     /**
@@ -102,13 +94,14 @@ class Auth {
     /**
      * Lấy ID Giỏ Hàng của user
      */
-    public static function cartId() {
-         return $_SESSION['cart_id'] ?? ($_SESSION['user']['ID_GH'] ?? null);
-    }
 
     /**
      * Kiểm tra đăng nhập (Alias cho check)
      */
+    public static function cartId() {
+        return $_SESSION['user']['id_gh'] ?? null;
+    }
+
     public static function isLoggedIn() {
         return self::check();
     }

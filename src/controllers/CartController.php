@@ -49,9 +49,12 @@ class CartController extends BaseController {
                     $_SESSION['cart'][$id_hh]['quantity'] += $quantity;
                 } else {
                     $_SESSION['cart'][$id_hh] = [
-                        'id' => $product['ID_HH'], 'name' => $product['TEN_HH'],
-                        'price' => $product['GIA_HIEN_TAI'], 'image' => $product['link_anh'],
-                        'quantity' => $quantity, 'discount_percent' => $product['PHAN_TRAM_KM'] ?? 0 
+                        'id'               => $product['id_hh'],
+                        'name'             => $product['ten_hh'],
+                        'price'            => $product['gia_hien_tai'],
+                        'image'            => $product['link_anh'] ?? 'default-image.png',
+                        'quantity'         => $quantity,
+                        'discount_percent' => $product['phan_tram_km'] ?? 0
                     ];
                 }
             }
@@ -127,9 +130,12 @@ class CartController extends BaseController {
         $totals = $this->calculateCartTotals($cartItems);
         header('Content-Type: application/json');
         echo json_encode([
-            'success' => true,
-            'cartCount' => $totalCount,
-            // ... (phần còn lại giữ nguyên) ...
+            'success'      => true,
+            'cartCount'    => $totalCount,
+            'subtotal'     => $totals['subtotal'],
+            'totalDiscount'=> $totals['totalDiscount'],
+            'total'        => $totals['total'],
+            'items'        => array_values($cartItems)
         ]);
         exit;
     }
@@ -137,13 +143,12 @@ class CartController extends BaseController {
     /**
      * HÀM REMOVE (Đã sửa)
      */
-    public function remove($id_hh) {
-        $totalCount = 0; $cartItems = [];
-        if (Auth::isLoggedIn()) {
-            $userCartId = Auth::cartId();
-            $this->cartModel->removeProductForUser($userCartId, $id_hh);
-            $totalCount = $this->cartModel->getCartItemCountForUser($userCartId);
-            $cartItems = $this->cartModel->getCartContentsForUser($userCartId);
+    public function remove($id_hh = null) {
+        // Lấy từ tham số hoặc từ URL
+        if (!$id_hh) {
+            $uri = $_SERVER['REQUEST_URI'];
+            $parts = explode('/', $uri);
+            $id_hh = end($parts);
         } else {
             unset($_SESSION['cart'][$id_hh]);
             $cartItems = $_SESSION['cart'] ?? [];

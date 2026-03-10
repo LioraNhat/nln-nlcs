@@ -32,7 +32,7 @@ class AdminController extends BaseController {
         Auth::requireLogin();
         
         $user = Auth::user();
-        if (!$user || $user['ID_ND'] !== 'AD') {
+        if (!$user || $user['id_nd'] !== 'AD') {
             $_SESSION['error'] = 'Bạn không có quyền truy cập trang này.';
             header('Location: /NLN_NLCS/public/');
             exit;
@@ -148,7 +148,7 @@ class AdminController extends BaseController {
             $role = $_POST['role_id']; // 'AD' hoặc 'KH'
 
             // Không cho phép tự hạ quyền chính mình để tránh mất quyền Admin
-            if ($id == $_SESSION['user']['ID_TK']) {
+            if ($id == $_SESSION['user']['id_tk']) {
                 $_SESSION['error'] = "Bạn không thể tự thay đổi quyền của chính mình!";
                 $this->redirect('/admin/users');
                 return;
@@ -480,16 +480,16 @@ class AdminController extends BaseController {
         date_default_timezone_set('Asia/Ho_Chi_Minh');
         $today = date('Y-m-d H:i:s');
         foreach ($promotions as $km) {
-            $status = $km['TRANG_THAI_KM'];
+            $status = $km['trang_thai_km'];
             // Nếu đã hủy thì bỏ qua, chỉ cập nhật cái đang chạy
             if ($status !== 'Đã hủy') {
                 $newStatus = $status;
-                if ($today < $km['NGAY_BD_KM']) $newStatus = 'Sắp diễn ra';
-                elseif ($today >= $km['NGAY_BD_KM'] && $today <= $km['NGAY_KT_KM']) $newStatus = 'Đang diễn ra';
-                elseif ($today > $km['NGAY_KT_KM']) $newStatus = 'Đã kết thúc';
+                if ($today < $km['ngay_bd_km']) $newStatus = 'Sắp diễn ra';
+                elseif ($today >= $km['ngay_bd_km'] && $today <= $km['ngay_kt_km']) $newStatus = 'Đang diễn ra';
+                elseif ($today > $km['ngay_kt_km']) $newStatus = 'Đã kết thúc';
                 
                 if ($newStatus !== $status) {
-                    $km['TRANG_THAI_KM'] = $newStatus;
+                    $km['trang_thai_km'] = $newStatus;
                     // Nếu muốn lưu vào DB luôn thì gọi hàm updateStatus ở Model
                 }
             }
@@ -1088,7 +1088,7 @@ class AdminController extends BaseController {
     // ======================================================
 
     public function profile() {
-        $id = $_SESSION['user']['ID_TK'];
+        $id = $_SESSION['user']['id_tk'];
         
         // 1. Lấy thông tin User
         $user = $this->userModel->getUserById($id);
@@ -1119,7 +1119,7 @@ class AdminController extends BaseController {
 
     public function updateProfile() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_SESSION['user']['ID_TK'];
+            $id = $_SESSION['user']['id_tk'];
             $password = $_POST['password'];
             $dia_chi = $_POST['dia_chi'];
             

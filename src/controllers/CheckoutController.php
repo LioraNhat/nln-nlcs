@@ -33,8 +33,11 @@ class CheckoutController extends BaseController {
         $subtotal = 0;
         $totalDiscount = 0;
         foreach ($cartItems as $item) {
-            $discountPercent = $item['discount_percent'] ?? 0;
-            $itemTotal = $item['price'] * $item['quantity'];
+            $price = $item['GIA_HIEN_TAI'] ?? 0;
+            $quantity = $item['SO_LUONG_SP'] ?? 0;
+            $discountPercent = $item['PHAN_TRAM_KM'] ?? 0;
+
+            $itemTotal = $price * $quantity;
             $subtotal += $itemTotal;
             $totalDiscount += ($itemTotal * $discountPercent / 100);
         }
