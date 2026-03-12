@@ -42,29 +42,31 @@ class CategoryModel extends BaseModel {
     }
 
     public function createCategory($ten_dm) {
-        // Tự sinh ID
         $stmt = $this->db->query("SELECT MAX(id_dm) as max_id FROM danh_muc");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $maxId = $row['max_id'];
-        if ($maxId) {
-            $num = (int)substr($maxId, 2);
-            $newId = 'DM' . str_pad($num + 1, 2, '0', STR_PAD_LEFT);
-        } else {
+
+        // VỊ TRÍ SỬA: Kiểm tra bảng rỗng trước khi substr
+        if (empty($maxId)) {
             $newId = 'DM01';
+        } else {
+            $num = (int)filter_var($maxId, FILTER_SANITIZE_NUMBER_INT);
+            $newId = 'DM' . str_pad($num + 1, 2, '0', STR_PAD_LEFT);
         }
         return $this->saveCategory($newId, $ten_dm);
     }
 
     public function createProductType($ten_loai, $id_dm) {
-        // Tự sinh ID
         $stmt = $this->db->query("SELECT MAX(id_loai2) as max_id FROM loai_hang_hoa");
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $maxId = $row['max_id'];
-        if ($maxId) {
-            $num = (int)substr($maxId, 3);
-            $newId = 'LHH' . str_pad($num + 1, 2, '0', STR_PAD_LEFT);
-        } else {
+
+        // VỊ TRÍ SỬA: Kiểm tra bảng rỗng
+        if (empty($maxId)) {
             $newId = 'LHH01';
+        } else {
+            $num = (int)filter_var($maxId, FILTER_SANITIZE_NUMBER_INT);
+            $newId = 'LHH' . str_pad($num + 1, 2, '0', STR_PAD_LEFT);
         }
         return $this->saveProductType($newId, $ten_loai, $id_dm);
     }
@@ -81,8 +83,9 @@ class CategoryModel extends BaseModel {
 
     public function updateCategory($id, $ten_dm) {
         try {
+            // SET ten_dm = ? (vị trí 1), WHERE id_dm = ? (vị trí 2)
             $stmt = $this->db->prepare("UPDATE danh_muc SET ten_dm = ? WHERE id_dm = ?");
-            return $stmt->execute([$ten_dm, $id]);
+            return $stmt->execute([$ten_dm, $id]); // Đúng thứ tự: tên trước, id sau
         } catch (\PDOException $e) {
             error_log($e->getMessage());
             return false;

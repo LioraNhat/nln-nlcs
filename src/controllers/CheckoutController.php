@@ -32,15 +32,18 @@ class CheckoutController extends BaseController {
     private function calculateCartTotals($cartItems) {
         $subtotal = 0;
         $totalDiscount = 0;
+
         foreach ($cartItems as $item) {
-            $price = $item['GIA_HIEN_TAI'] ?? 0;
-            $quantity = $item['SO_LUONG_SP'] ?? 0;
-            $discountPercent = $item['PHAN_TRAM_KM'] ?? 0;
+            // Sửa lại Key cho khớp với CartModel
+            $price = $item['price'] ?? 0; 
+            $quantity = $item['quantity'] ?? 0;
+            $discountPercent = $item['discount_percent'] ?? 0;
 
             $itemTotal = $price * $quantity;
             $subtotal += $itemTotal;
             $totalDiscount += ($itemTotal * $discountPercent / 100);
         }
+
         $total = $subtotal - $totalDiscount;
         return [
             'subtotal' => $subtotal,
@@ -129,14 +132,14 @@ class CheckoutController extends BaseController {
 
         $newOrderId = $this->orderModel->generateNewOrderId(); 
         $data = [
-            'ID_DH' => $newOrderId,
-            'ID_PTTT' => $id_pttt,
-            'ID_TK' => $userId,
-            'DIA_CHI_GIAO_DH' => $formattedAddress,
-            'TONG_GIA_TRI_DH' => $totals['subtotal'],
-            'TIEN_GIAM_GIA' => $totals['totalDiscount'],
-            'SO_TIEN_THANH_TOAN' => $totals['total'],
-            'TRANG_THAI_THANH_TOAN' => ($id_pttt == 'PTTT1') ? 'Chưa thanh toán' : 'Đã thanh toán' 
+            'id_dh'                 => $newOrderId,
+            'id_pttt'               => $id_pttt,
+            'id_tk'                 => $userId,
+            'id_dc'                 => $selected_address_id,
+            'tong_gia_tri_don'      => $totals['subtotal'],
+            'tien_giam_gia'         => $totals['totalDiscount'],
+            'thanh_tien'            => $totals['total'],
+            'trang_thai_thanh_toan' => ($id_pttt == 'PTTT1') ? 0 : 1 // 0: Chưa thanh toán, 1: Đã thanh toán
         ];
 
         try {

@@ -1,142 +1,132 @@
-<?php
-require_once __DIR__ . '/../layouts/header.php';
-require_once __DIR__ . '/../layouts/sidebar.php';
-?>
+<?php require_once __DIR__ . '/../layouts/header.php'; ?>
+<?php require_once __DIR__ . '/../layouts/sidebar.php'; ?>
 
 <main class="app-main">
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-sm-6"><h3 class="mb-0">Tạo Phiếu Nhập Kho</h3></div>
+                <div class="col-sm-6"><h3 class="mb-0">Nhập lô mới</h3></div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-end">
+                        <li class="breadcrumb-item"><a href="<?= BASE_PATH ?>/admin/inventories">Tồn kho</a></li>
+                        <li class="breadcrumb-item active">Nhập lô</li>
+                    </ol>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="app-content">
         <div class="container-fluid">
-            <form action="<?= BASE_PATH ?>/admin/inventories/store" method="POST">
-                
-                <div class="card mb-3">
-                    <div class="card-header bg-primary text-white">Thông tin phiếu nhập</div>
-                    <div class="card-body">
+
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success"><?= $success ?></div>
+            <?php endif; ?>
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger"><?= $error ?></div>
+            <?php endif; ?>
+
+            <!-- THÔNG TIN SẢN PHẨM -->
+            <div class="card card-outline card-info mb-3">
+                <div class="card-header"><h3 class="card-title">Thông tin sản phẩm</h3></div>
+                <div class="card-body">
+                    <p><strong>Mã:</strong> <?= $product['id_hh'] ?></p>
+                    <p><strong>Tên:</strong> <?= htmlspecialchars($product['ten_hh']) ?></p>
+                    <p><strong>Loại:</strong> <?= htmlspecialchars($product['ten_loai'] ?? '') ?></p>
+                </div>
+            </div>
+
+            <!-- FORM NHẬP LÔ MỚI -->
+            <div class="card card-outline card-primary mb-3">
+                <div class="card-header"><h3 class="card-title">Thêm lô hàng mới</h3></div>
+                <div class="card-body">
+                    <form action="<?= BASE_PATH ?>/admin/inventories/store" method="POST">
+                        <input type="hidden" name="id_hh" value="<?= $product['id_hh'] ?>">
+
                         <div class="row">
-                            <div class="col-md-6 form-group mb-3">
-                                <label class="fw-bold">Nhà cung cấp <span class="text-danger">*</span></label>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Nhà cung cấp <span class="text-danger">*</span></label>
                                 <select name="id_ncc" class="form-select" required>
-                                    <option value="">-- Chọn Nhà cung cấp --</option>
-                                    <?php foreach ($suppliers as $ncc): ?>
-                                        <option value="<?= $ncc['ID_NCC'] ?>"><?= $ncc['TEN_NCC'] ?></option>
+                                    <option value="">-- Chọn NCC --</option>
+                                    <?php foreach ($suppliers as $s): ?>
+                                        <option value="<?= $s['id_ncc'] ?>"><?= htmlspecialchars($s['ten_ncc']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-6 form-group mb-3">
-                                <label class="fw-bold">Ngày nhập</label>
-                                <input type="datetime-local" name="ngay_lap" class="form-control" value="<?= date('Y-m-d\TH:i') ?>" required>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Khuyến mãi áp dụng</label>
+                                <select name="id_km" class="form-select">
+                                    <option value="">-- Không có --</option>
+                                    <?php foreach ($promotions as $km): ?>
+                                        <option value="<?= $km['id_km'] ?>"><?= htmlspecialchars($km['ten_km']) ?> (<?= $km['phan_tram_km'] ?>%)</option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
-                            <div class="col-md-12 form-group">
-                                <label class="fw-bold">Chứng từ gốc (Số hóa đơn giấy)</label>
-                                <input type="text" name="chung_tu" class="form-control" placeholder="Ví dụ: HD00123...">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Hạn sử dụng <span class="text-danger">*</span></label>
+                                <input type="datetime-local" name="hsd_lo" class="form-control" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Số lượng nhập <span class="text-danger">*</span></label>
+                                <input type="number" name="so_luong" class="form-control" min="1" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Giá vốn nhập (VNĐ) <span class="text-danger">*</span></label>
+                                <input type="number" name="don_gia" class="form-control" min="0" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Giá bán (VNĐ) <span class="text-danger">*</span></label>
+                                <input type="number" name="gia_ban" class="form-control" min="0" required>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                        <span>Chi tiết hàng nhập</span>
-                        <button type="button" class="btn btn-light btn-sm text-success fw-bold" onclick="addRow()">
-                            <i class="bi bi-plus-circle"></i> Thêm dòng
-                        </button>
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table table-bordered mb-0" id="tbl-details">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th width="40%">Sản phẩm</th>
-                                    <th width="15%">Số lượng</th>
-                                    <th width="20%">Đơn giá nhập</th>
-                                    <th width="20%">Thành tiền</th>
-                                    <th width="5%">Xóa</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <select name="product_id[]" class="form-select" required onchange="updateTotal()">
-                                            <option value="">-- Chọn sản phẩm --</option>
-                                            <?php foreach ($products as $p): ?>
-                                                <option value="<?= $p['ID_HH'] ?>"><?= $p['ID_HH'] ?> - <?= htmlspecialchars($p['TEN_HH']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="number" name="quantity[]" class="form-control" min="1" value="1" oninput="updateTotal()" required>
-                                    </td>
-                                    <td>
-                                        <input type="number" name="price[]" class="form-control" min="0" value="0" oninput="updateTotal()" required>
-                                    </td>
-                                    <td class="align-middle fw-bold text-end row-total">0</td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)"><i class="bi bi-trash"></i></button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                            <tfoot class="bg-light fw-bold">
-                                <tr>
-                                    <td colspan="3" class="text-end">TỔNG CỘNG:</td>
-                                    <td class="text-end text-danger fs-5" id="grand-total">0</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    <div class="card-footer text-end">
-                        <a href="<?= BASE_PATH ?>/admin/inventories" class="btn btn-secondary">Hủy</a>
-                        <button type="submit" class="btn btn-primary">Lưu phiếu nhập</button>
-                    </div>
+                        <div class="text-end">
+                            <a href="<?= BASE_PATH ?>/admin/inventories" class="btn btn-secondary me-2">Hủy</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Lưu lô hàng
+                            </button>
+                        </div>
+                    </form>
                 </div>
+            </div>
 
-            </form>
+            <!-- DANH SÁCH LÔ HIỆN CÓ -->
+            <div class="card card-outline card-secondary">
+                <div class="card-header"><h3 class="card-title">Các lô hàng hiện có</h3></div>
+                <div class="card-body">
+                    <table class="table table-bordered table-sm align-middle">
+                        <thead>
+                            <tr class="text-center">
+                                <th>Mã lô</th>
+                                <th>HSD</th>
+                                <th>Tồn</th>
+                                <th>Giá vốn</th>
+                                <th>Giá bán</th>
+                                <th>KM</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php if (!empty($lots)): foreach ($lots as $lot): ?>
+                            <tr>
+                                <td><?= $lot['id_lo'] ?></td>
+                                <td class="text-center"><?= date('d/m/Y', strtotime($lot['hsd_lo'])) ?></td>
+                                <td class="text-center"><?= $lot['so_luong_con_lai'] ?></td>
+                                <td class="text-end"><?= $lot['gia_von_nhap'] ? number_format($lot['gia_von_nhap'],0,',','.').'đ' : '—' ?></td>
+                                <td class="text-end"><?= $lot['gia_hien_tai'] ? number_format($lot['gia_hien_tai'],0,',','.').'đ' : '—' ?></td>
+                                <td class="text-center"><?= $lot['ten_km'] ? $lot['ten_km'].' ('.$lot['phan_tram_km'].'%)' : '—' ?></td>
+                                <td class="text-center"><span class="badge bg-info"><?= $lot['ten_trang_thai_lo'] ?></span></td>
+                            </tr>
+                        <?php endforeach; else: ?>
+                            <tr><td colspan="7" class="text-center text-muted">Chưa có lô nào.</td></tr>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 </main>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>
-
-<script>
-    // JS đơn giản để thêm dòng và tính tiền
-    function addRow() {
-        const table = document.getElementById('tbl-details').getElementsByTagName('tbody')[0];
-        const newRow = table.rows[0].cloneNode(true);
-        // Reset giá trị inputs
-        newRow.querySelectorAll('input').forEach(input => input.value = input.name.includes('quantity') ? 1 : 0);
-        newRow.querySelector('select').value = "";
-        newRow.querySelector('.row-total').innerText = "0";
-        table.appendChild(newRow);
-    }
-
-    function removeRow(btn) {
-        const row = btn.parentNode.parentNode;
-        const tbody = document.getElementById('tbl-details').getElementsByTagName('tbody')[0];
-        if (tbody.rows.length > 1) {
-            row.parentNode.removeChild(row);
-            updateTotal();
-        } else {
-            alert("Phải có ít nhất 1 dòng!");
-        }
-    }
-
-    function updateTotal() {
-        let grandTotal = 0;
-        const rows = document.querySelectorAll('#tbl-details tbody tr');
-        rows.forEach(row => {
-            const qty = parseFloat(row.querySelector('input[name="quantity[]"]').value) || 0;
-            const price = parseFloat(row.querySelector('input[name="price[]"]').value) || 0;
-            const total = qty * price;
-            
-            row.querySelector('.row-total').innerText = new Intl.NumberFormat('vi-VN').format(total);
-            grandTotal += total;
-        });
-        document.getElementById('grand-total').innerText = new Intl.NumberFormat('vi-VN').format(grandTotal) + ' đ';
-    }
-</script>

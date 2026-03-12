@@ -100,62 +100,46 @@ class OrderModel extends BaseModel {
 
 
     public function createOrder($data) {
-
         $sql = "INSERT INTO don_hang 
-                    (id_dh, id_pttt, id_tk, id_dc,
-                     ngay_gio_tao_don,
-                     tong_gia_tri_don, tien_giam_gia, thanh_tien,
-                     trang_thai_thanh_toan)
+                    (id_dh, id_pttt, id_tk, id_dc, ngay_gio_tao_don,
+                    tong_gia_tri_don, tien_giam_gia, thanh_tien, trang_thai_thanh_toan)
                 VALUES 
-                    (:id_dh, :id_pttt, :id_tk, :id_dc,
-                     NOW(),
-                     :tong_gia_tri, :giam_gia, :thanh_tien,
-                     :trang_thai_tt)";
-
+                    (:id_dh, :id_pttt, :id_tk, :id_dc, NOW(),
+                    :tong_gia_tri_don, :tien_giam_gia, :thanh_tien, :trang_thai_thanh_toan)";
         $stmt = $this->db->prepare($sql);
-
         return $stmt->execute([
-            ':id_dh' => $data['id_dh'],
-            ':id_pttt' => $data['id_pttt'],
-            ':id_tk' => $data['id_tk'],
-            ':id_dc' => $data['id_dc'],
-            ':tong_gia_tri' => $data['tong_gia_tri_don'],
-            ':giam_gia' => $data['tien_giam_gia'],
-            ':thanh_tien' => $data['thanh_tien'],
-            ':trang_thai_tt' => $data['trang_thai_thanh_toan']
+            ':id_dh'                 => $data['id_dh'],
+            ':id_pttt'               => $data['id_pttt'],
+            ':id_tk'                 => $data['id_tk'],
+            ':id_dc'                 => $data['id_dc'],
+            ':tong_gia_tri_don'      => $data['tong_gia_tri_don'],
+            ':tien_giam_gia'         => $data['tien_giam_gia'],
+            ':thanh_tien'            => $data['thanh_tien'],
+            ':trang_thai_thanh_toan' => $data['trang_thai_thanh_toan']
         ]);
     }
 
-
     public function addOrderDetails($orderId, $cartItems) {
-
         $sql = "INSERT INTO chi_tiet_don_hang (id_dh, id_hh, id_lo, so_luong_ban_ra) VALUES (?, ?, ?, ?)";
-
         $stmt = $this->db->prepare($sql);
 
         try {
-
             $this->db->beginTransaction();
-
             foreach ($cartItems as $itemId => $item) {
-
-                $quantity = $item['quantity'] ?? $item['so_luong'] ?? 0;
-
+                $quantity = $item['quantity'] ?? 0;
                 $id_lo = $item['id_lo'] ?? null;
+
+                if (empty($id_lo)) {
+                    throw new \Exception("Sản phẩm {$item['name']} không tìm thấy lô hàng hợp lệ.");
+                }
 
                 $stmt->execute([$orderId, $itemId, $id_lo, $quantity]);
             }
-
             $this->db->commit();
-
             return true;
-
-        } catch (Exception $e) {
-
+        } catch (\Exception $e) {
             $this->db->rollBack();
-
-            error_log($e->getMessage());
-
+            error_log("Lỗi lưu chi tiết đơn hàng: " . $e->getMessage());
             return false;
         }
     }

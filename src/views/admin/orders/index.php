@@ -73,32 +73,32 @@ $mapStatus = [
                         <tbody>
                             <?php foreach ($orders as $row): ?>
                                 <?php 
-                                    // Lấy giá trị số để sắp xếp (mặc định là 99 nếu không tìm thấy)
-                                    $sortStatus = $mapStatus[$row['TRANG_THAI_DHHT']] ?? 99; 
+                                    // Sử dụng ten_trang_thai để lấy class sắp xếp
+                                    $sortStatus = $mapStatus[$row['ten_trang_thai']] ?? 99; 
                                 ?>
                                 
                                 <tr>
-                                    <td><?= $row['ID_DH'] ?></td>
+                                    <td><?= $row['id_dh'] ?></td>
                                     <td>
-                                        <div class="fw-bold"><?= htmlspecialchars($row['HO_TEN']) ?></div>
-                                        <small class="text-muted">ID: <?= $row['ID_TK'] ?></small>
+                                        <div class="fw-bold"><?= htmlspecialchars($row['ho_ten']) ?></div>
+                                        <small class="text-muted">ID: <?= $row['id_tk'] ?></small>
                                     </td>
-                                    <td><?= date('d/m/Y H:i', strtotime($row['NGAY_GIO_TAO_DON'])) ?></td>
-                                    <td class="text-end fw-bold text-danger"><?= number_format($row['SO_TIEN_THANH_TOAN']) ?>đ</td>
+                                    <td><?= date('d/m/Y H:i', strtotime($row['ngay_gio_tao_don'])) ?></td>
+                                    <td class="text-end fw-bold text-danger"><?= number_format($row['thanh_tien']) ?>đ</td>
                                     
                                     <td data-order="<?= $sortStatus ?>">
-                                        <span class="badge <?= getBadgeClass($row['TRANG_THAI_DHHT']) ?>"><?= $row['TRANG_THAI_DHHT'] ?></span>
+                                        <span class="badge <?= getBadgeClass($row['ten_trang_thai']) ?>"><?= $row['ten_trang_thai'] ?></span>
                                     </td>
 
                                     <td class="text-center">
-                                        <?php if ($row['TRANG_THAI_THANH_TOAN'] == 'Đã thanh toán'): ?>
+                                        <?php if ($row['trang_thai_thanh_toan'] == 'Đã thanh toán'): ?>
                                             <span class="badge bg-success"><i class="bi bi-check-circle"></i> Đã TT</span>
                                         <?php else: ?>
                                             <span class="badge bg-light text-dark border">Chưa TT</span>
                                         <?php endif; ?>
                                     </td>
                                     <td align="center">
-                                        <a href="<?= BASE_PATH ?>/admin/order-detail/<?= $row['ID_DH'] ?>" class="btn btn-sm btn-primary">
+                                        <a href="<?= BASE_PATH ?>/admin/order-detail/<?= $row['id_dh'] ?>" class="btn btn-sm btn-primary">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </td>
@@ -115,15 +115,13 @@ $mapStatus = [
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>
 
 <script>
-    // Sử dụng Event Listener 'DOMContentLoaded' để đảm bảo HTML tải xong
     document.addEventListener('DOMContentLoaded', function() {
-        // Kiểm tra xem jQuery đã được tải chưa
         if (typeof $ !== 'undefined') {
             $('#table-orders').DataTable({
-                "paging": false,       // Tắt phân trang client (vì đã limit ở server)
+                "paging": false,
                 "lengthChange": false,
-                "searching": false,    // Tắt search client (vì đã có form search server)
-                "ordering": false,     // QUAN TRỌNG: Tắt sắp xếp client để giữ thứ tự từ SQL
+                "searching": false,
+                "ordering": false,
                 "info": false,
                 "autoWidth": false,
                 "responsive": true,

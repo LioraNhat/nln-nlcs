@@ -10,7 +10,7 @@ $statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao h
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-sm-6"><h3 class="mb-0">Chi tiết Đơn hàng: #<?= $order['ID_DH'] ?></h3></div>
+                <div class="col-sm-6"><h3 class="mb-0">Chi tiết Đơn hàng: #<?= $order['id_dh'] ?></h3></div>
                 <div class="col-sm-6 text-end">
                     <a href="<?= BASE_PATH ?>/admin/orders" class="btn btn-secondary">Quay lại danh sách</a>
                 </div>
@@ -34,18 +34,18 @@ $statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao h
                         <div class="card-body">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <strong>Người đặt:</strong> <?= htmlspecialchars($order['HO_TEN']) ?> <br>
-                                    <strong>SĐT:</strong> <?= htmlspecialchars($order['SDT_TK']) ?> <br>
-                                    <strong>Email:</strong> <?= htmlspecialchars($order['EMAIL']) ?>
+                                    <strong>Người đặt:</strong> <?= htmlspecialchars($order['ho_ten']) ?> <br>
+                                    <strong>SĐT:</strong> <?= htmlspecialchars($order['sdt_tk']) ?> <br>
+                                    <strong>Email:</strong> <?= htmlspecialchars($order['email_tk']) ?>
                                 </div>
                                 <div class="col-md-6 text-md-end">
-                                    <strong>Ngày đặt:</strong> <?= date('d/m/Y H:i', strtotime($order['NGAY_GIO_TAO_DON'])) ?> <br>
-                                    <strong>Phương thức TT:</strong> <?= $order['ID_PTTT'] == 'PTTT1' ? 'COD (Tiền mặt)' : 'Chuyển khoản/Ví' ?>
+                                    <strong>Ngày đặt:</strong> <?= date('d/m/Y H:i', strtotime($order['ngay_gio_tao_don'])) ?> <br>
+                                    <strong>Phương thức TT:</strong> <?= $order['id_pttt'] == 'PTTT1' ? 'COD (Tiền mặt)' : 'Chuyển khoản/Ví' ?>
                                 </div>
                             </div>
                             <hr>
                             <strong>Địa chỉ giao hàng:</strong>
-                            <p class="text-muted"><?= nl2br(htmlspecialchars($order['DIA_CHI_GIAO_DH'])) ?></p>
+                            <p class="text-muted"><?= nl2br(htmlspecialchars($order['dia_chi_chi_tiet'])) ?></p>
                         </div>
                     </div>
 
@@ -72,28 +72,28 @@ $statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao h
                                                     <?php if($item['link_anh']): ?>
                                                         <img src="<?= BASE_PATH ?>/uploads/<?= $item['link_anh'] ?>" width="40" height="40" class="me-2 rounded">
                                                     <?php endif; ?>
-                                                    <?= htmlspecialchars($item['TEN_HH']) ?>
+                                                    <?= htmlspecialchars($item['ten_hh']) ?>
                                                 </div>
                                             </td>
-                                            <td class="text-center"><?= $item['DVT'] ?></td>
-                                            <td class="text-center fw-bold"><?= $item['SO_LUONG_BAN_RA'] ?></td>
-                                            <td class="text-end"><?= number_format($item['don_gia_ban']) ?>đ</td>
-                                            <td class="text-end fw-bold"><?= number_format($item['SO_LUONG_BAN_RA'] * $item['don_gia_ban']) ?>đ</td>
+                                            <td class="text-center"><?= $item['dvt'] ?></td>
+                                            <td class="text-center fw-bold"><?= $item['so_luong_ban_ra'] ?></td>
+                                            <td class="text-end"><?= number_format($item['don_gia']) ?>đ</td>
+                                            <td class="text-end fw-bold"><?= number_format($item['so_luong_ban_ra'] * $item['don_gia']) ?>đ</td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                                 <tfoot>
                                     <tr>
                                         <td colspan="4" class="text-end">Tổng giá trị đơn hàng:</td>
-                                        <td class="text-end fw-bold"><?= number_format($order['TONG_GIA_TRI_DH']) ?>đ</td>
+                                        <td class="text-end fw-bold"><?= number_format($order['tong_gia_tri_don']) ?>đ</td>
                                     </tr>
                                     <tr>
                                         <td colspan="4" class="text-end text-success">Giảm giá:</td>
-                                        <td class="text-end fw-bold text-success">-<?= number_format($order['TIEN_GIAM_GIA']) ?>đ</td>
+                                        <td class="text-end fw-bold text-success">-<?= number_format($order['tien_giam_gia']) ?>đ</td>
                                     </tr>
                                     <tr class="bg-light fs-5">
                                         <td colspan="4" class="text-end fw-bold text-danger">THỰC THU:</td>
-                                        <td class="text-end fw-bold text-danger"><?= number_format($order['SO_TIEN_THANH_TOAN']) ?>đ</td>
+                                        <td class="text-end fw-bold text-danger"><?= number_format($order['thanh_tien']) ?>đ</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -108,13 +108,13 @@ $statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao h
                         </div>
                         <div class="card-body">
                             <form action="<?= BASE_PATH ?>/admin/order-update-status" method="POST">
-                                <input type="hidden" name="id_dh" value="<?= $order['ID_DH'] ?>">
+                                <input type="hidden" name="id_dh" value="<?= $order['id_dh'] ?>">
                                 
                                 <div class="mb-3">
                                     <label class="form-label">Trạng thái hiện tại:</label>
                                     <select name="trang_thai" class="form-select form-select-lg mb-3">
                                         <?php foreach ($statusList as $st): ?>
-                                            <option value="<?= $st ?>" <?= $order['TRANG_THAI_DHHT'] == $st ? 'selected' : '' ?>>
+                                            <option value="<?= $st ?>" <?= $order['ten_trang_thai'] == $st ? 'selected' : '' ?>>
                                                 <?= $st ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -135,9 +135,9 @@ $statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao h
                             <h3 class="card-title">Thông tin thanh toán</h3>
                         </div>
                         <div class="card-body">
-                            <p><strong>Trạng thái:</strong> <?= $order['TRANG_THAI_THANH_TOAN'] ?></p>
-                            <?php if ($order['NGAY_THANH_TOAN'] && $order['NGAY_THANH_TOAN'] != '0000-00-00 00:00:00'): ?>
-                                <p><strong>Ngày TT:</strong> <?= date('d/m/Y H:i', strtotime($order['NGAY_THANH_TOAN'])) ?></p>
+                            <p><strong>Trạng thái:</strong> <?= $order['trang_thai_thanh_toan'] ?></p>
+                            <?php if ($order['ngay_thanh_toan'] && $order['ngay_thanh_toan'] != '0000-00-00 00:00:00'): ?>
+                                <p><strong>Ngày TT:</strong> <?= date('d/m/Y H:i', strtotime($order['ngay_thanh_toan'])) ?></p>
                             <?php endif; ?>
                         </div>
                     </div>

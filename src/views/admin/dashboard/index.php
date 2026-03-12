@@ -72,6 +72,7 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                     </div>
                 </div>
             </div>
+
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card mb-4">
@@ -100,28 +101,34 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                                         <?php foreach ($recentOrders as $order): ?>
                                             <tr>
                                                 <td>
-                                                    <a href="<?php echo BASE_PATH; ?>/admin/order-detail/<?php echo $order['ID_DH']; ?>" class="text-primary fw-bold">
-                                                        #<?php echo $order['ID_DH']; ?>
+                                                    <a href="<?php echo BASE_PATH; ?>/admin/orders/view?id=<?php echo $order['id_dh']; ?>" class="text-primary fw-bold">
+                                                        #<?php echo $order['id_dh']; ?>
                                                     </a>
                                                 </td>
-                                                <td><?php echo htmlspecialchars($order['TEN_NGUOI_NHAN'] ?? 'Khách lẻ'); ?></td>
-                                                <td><?php echo date('d/m/Y H:i', strtotime($order['NGAY_GIO_TAO_DON'])); ?></td>
-                                                <td><?php echo number_format($order['SO_TIEN_THANH_TOAN'], 0, ',', '.'); ?>đ</td>
+                                                <td><?php echo htmlspecialchars($order['ho_ten'] ?? 'Khách lẻ'); ?></td>
+                                                
+                                                <td><?php echo date('d/m/Y H:i', strtotime($order['ngay_gio_tao_don'] ?? 'now')); ?></td>
+                                                
+                                                <td><?php echo number_format($order['thanh_tien'] ?? 0, 0, ',', '.'); ?>đ</td>
+                                                
                                                 <td>
                                                     <?php 
-                                                        // Badge màu sắc theo trạng thái
+                                                        // SỬA: TRANG_THAI_DHHT -> ten_trang_thai (Sử dụng cột từ JOIN bảng danh_muc_trang_thai)
+                                                        $statusName = $order['ten_trang_thai'] ?? 'Chờ xử lý';
+                                                        $statusId = $order['id_ttd'] ?? 'TTD01';
+                                                        
                                                         $statusColor = 'secondary';
-                                                        if ($order['TRANG_THAI_DHHT'] == 'Chờ xử lý') $statusColor = 'warning';
-                                                        if ($order['TRANG_THAI_DHHT'] == 'Đang giao hàng') $statusColor = 'primary';
-                                                        if ($order['TRANG_THAI_DHHT'] == 'Hoàn thành') $statusColor = 'success';
-                                                        if ($order['TRANG_THAI_DHHT'] == 'Đã hủy') $statusColor = 'danger';
+                                                        if ($statusId == 'TTD01') $statusColor = 'warning';   // Chờ xử lý
+                                                        if ($statusId == 'TTD03') $statusColor = 'primary';   // Đang giao
+                                                        if ($statusId == 'TTD04') $statusColor = 'success';   // Hoàn thành
+                                                        if ($statusId == 'TTD05') $statusColor = 'danger';    // Đã hủy
                                                     ?>
                                                     <span class="badge text-bg-<?php echo $statusColor; ?>">
-                                                        <?php echo $order['TRANG_THAI_DHHT']; ?>
+                                                        <?php echo $statusName; ?>
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="<?php echo BASE_PATH; ?>/admin/order-detail/<?php echo $order['ID_DH']; ?>" class="btn btn-sm btn-outline-primary">
+                                                    <a href="<?php echo BASE_PATH; ?>/admin/orders/view?id=<?php echo $order['id_dh']; ?>" class="btn btn-sm btn-outline-primary">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
                                                 </td>
@@ -141,7 +148,6 @@ require_once __DIR__ . '/../layouts/sidebar.php';
         </div>
     </div>
 </main>
-
 <?php
 // 3. Gọi Footer
 require_once __DIR__ . '/../layouts/footer.php';

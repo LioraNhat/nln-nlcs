@@ -90,14 +90,6 @@ class Auth {
         header('Location: ' . self::getBasePath() . '/auth/login');
         exit;
     }
-
-    /**
-     * Lấy ID Giỏ Hàng của user
-     */
-
-    /**
-     * Kiểm tra đăng nhập (Alias cho check)
-     */
     public static function cartId() {
         return $_SESSION['user']['id_gh'] ?? null;
     }

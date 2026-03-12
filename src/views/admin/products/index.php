@@ -1,4 +1,4 @@
-<?php
+<?php 
 require_once __DIR__ . '/../layouts/header.php'; 
 require_once __DIR__ . '/../layouts/sidebar.php';
 ?>
@@ -7,9 +7,7 @@ require_once __DIR__ . '/../layouts/sidebar.php';
     <div class="app-content-header">
         <div class="container-fluid">
             <div class="row">
-                <div class="col-sm-6">
-                    <h3 class="mb-0">Quản lý Sản phẩm</h3>
-                </div>
+                <div class="col-sm-6"><h3 class="mb-0">Quản lý Sản phẩm</h3></div>
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-end">
                         <li class="breadcrumb-item"><a href="<?php echo BASE_PATH; ?>/admin/dashboard">Home</a></li>
@@ -17,15 +15,12 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                     </ol>
                 </div>
             </div>
-            <div class="row mb-3">
+            <div class="row mb-3 mt-3">
                 <div class="col-md-6">
                     <form action="" method="GET">
                         <div class="input-group">
-                            <input type="text" name="search" class="form-control" placeholder="Nhập từ khóa tìm kiếm..." value="<?= isset($searchKeyword) ? htmlspecialchars($searchKeyword) : '' ?>">
-                            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Tìm kiếm</button>
-                            <?php if(isset($searchKeyword) && $searchKeyword != ''): ?>
-                                <a href="?" class="btn btn-secondary" title="Xóa tìm kiếm"><i class="bi bi-x-lg"></i></a>
-                            <?php endif; ?>
+                            <input type="text" name="search" class="form-control" placeholder="Tìm tên hoặc mã..." value="<?= htmlspecialchars($searchKeyword ?? '') ?>">
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
                         </div>
                     </form>
                 </div>
@@ -39,139 +34,118 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                 <div class="card-header">
                     <h3 class="card-title">Danh sách Hàng hóa</h3>
                     <div class="card-tools">
-                        <a href="<?php echo BASE_PATH; ?>/admin/products/create" class="btn btn-primary btn-sm">
-                            <i class="bi bi-plus-lg"></i> Thêm mới
-                        </a>
+                        <a href="<?php echo BASE_PATH; ?>/admin/products/create" class="btn btn-primary btn-sm">+ Thêm mới</a>
                     </div>
                 </div>
                 
                 <div class="card-body">
-                    <?php if (isset($success)): ?>
-                        <div class="alert alert-success"><?php echo $success; ?></div>
-                    <?php endif; ?>
-                    <?php if (isset($error)): ?>
-                        <div class="alert alert-danger"><?php echo $error; ?></div>
-                    <?php endif; ?>
-
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover align-middle">
-                            <colgroup>
-                                <col width="5%">
-                                <col width="10%">
-                                <col width="30%">
-                                <col width="15%">
-                                <col width="10%">
-                                <col width="15%">
-                                <col width="15%">
-                            </colgroup>
                             <thead>
-                                <tr class="text-center align-middle">
+                                <tr class="text-center">
                                     <th>STT</th>
                                     <th>Hình ảnh</th>
                                     <th>Tên sản phẩm</th>
                                     <th>Danh mục</th>
                                     <th>ĐVT</th>
+                                    <th>Lô & HSD</th>
                                     <th>Giá bán</th>
                                     <th>Hành động</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <?php 
-                                if (!empty($products)):
-                                    // Tính số thứ tự (STT) dựa trên trang hiện tại
-                                    $i = ($currentPage - 1) * 20 + 1;
-                                    
-                                    foreach ($products as $row):
-                                        // Xử lý đường dẫn ảnh
-                                        $imgSrc = !empty($row['link_anh']) 
-                                            ? BASE_PATH . '/uploads/' . $row['link_anh'] 
-                                            : BASE_PATH . '/admin_assets/assets/img/default-150x150.png';
-                                        
-                                        // Xử lý hiển thị giá
-                                        $giaHienTai = isset($row['GIA_HIEN_TAI']) ? number_format($row['GIA_HIEN_TAI'], 0, ',', '.') . 'đ' : 'Chưa có giá';
-                                ?>
-                                    <tr>
-                                        <td class="text-center"><?php echo $i++; ?></td>
-                                        
-                                        <td class="text-center">
-                                            <img src="<?php echo $imgSrc; ?>" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: cover;" alt="SP">
-                                        </td>
-                                        
-                                        <td>
-                                            <p class="mb-0 fw-bold"><?php echo htmlspecialchars($row['TEN_HH']); ?></p>
-                                            <small class="text-muted">Mã: <?php echo $row['ID_HH']; ?></small>
-                                            <?php if ($row['DUOC_PHEP_BAN'] == 0): ?>
-                                                <br><span class="badge text-bg-danger">Ngừng kinh doanh</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        
-                                        <td><?php echo htmlspecialchars($row['TEN_LHH'] ?? 'Chưa phân loại'); ?></td>
-                                        
-                                        <td class="text-center"><?php echo htmlspecialchars($row['DVT'] ?? ''); ?></td>
 
-                                        <td class="text-end fw-bold text-success">
-                                            <?php echo $giaHienTai; ?>
-                                        </td>
-                                        
-                                        <td class="text-center">
-                                            <div class="btn-group">
-                                                <a href="<?php echo BASE_PATH; ?>/admin/products/edit/<?php echo $row['ID_HH']; ?>" class="btn btn-sm btn-info" title="Sửa">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <a href="javascript:void(0);" onclick="confirmDelete('<?php echo $row['ID_HH']; ?>')" class="btn btn-sm btn-danger" title="Xóa">
-                                                    <i class="bi bi-trash"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
-                                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                            Chưa có sản phẩm nào trong kho.
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
+                            <tbody>
+                            <?php 
+                            if (!empty($products)):
+                                $i = ($currentPage - 1) * 20 + 1;
+
+                                foreach ($products as $row):
+
+                                    $imgSrc = !empty($row['link_anh']) 
+                                        ? BASE_PATH . '/uploads/' . $row['link_anh'] 
+                                        : BASE_PATH . '/admin_assets/assets/img/default-150x150.png';
+
+                                    $giaHienTai = isset($row['gia_hien_tai']) 
+                                        ? number_format($row['gia_hien_tai'], 0, ',', '.') . 'đ' 
+                                        : 'Chưa có giá';
+                            ?>
+
+                            <tr>
+                                <td class="text-center"><?php echo $i++; ?></td>
+                                <td class="text-center">
+                                    <img src="<?php echo $imgSrc; ?>" 
+                                        class="img-thumbnail" 
+                                        style="width:50px;height:50px;object-fit:cover;">
+                                </td>
+                                <td>
+                                    <p class="mb-0 fw-bold"><?php echo htmlspecialchars($row['ten_hh'] ?? ''); ?></p>
+                                    <small class="text-muted">Mã: <?php echo $row['id_hh'] ?? ''; ?></small>
+
+                                    <?php if (($row['duoc_phep_ban'] ?? 0) == 0): ?>
+                                        <br><span class="badge text-bg-danger">Ngừng bán</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo htmlspecialchars($row['ten_loai'] ?? 'Chưa phân loại'); ?></td>
+                                <td class="text-center"><?php echo htmlspecialchars($row['dvt'] ?? ''); ?></td>
+                                <!-- LÔ HÀNG -->
+                                <td>
+                                    <?php if(!empty($row['id_lo'])): ?>
+                                        <span class="badge bg-info"><?php echo $row['id_lo']; ?></span><br>
+                                        <?php if(!empty($row['hsd_lo'])): ?>
+                                            <small>HSD: <?php echo date('d/m/Y', strtotime($row['hsd_lo'])); ?></small><br>
+                                        <?php endif; ?>
+                                        <small class="text-success">
+                                            Tồn: <?php echo $row['ton_lo'] ?? 0; ?>
+                                        </small>
+                                    <?php else: ?>
+                                        <span class="text-danger">Hết hàng / Chưa nhập lô</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end fw-bold text-success">
+                                    <?php echo $giaHienTai; ?>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a href="<?php echo BASE_PATH; ?>/admin/inventories/create?id_hh=<?php echo $row['id_hh']; ?>" 
+                                        class="btn btn-sm btn-success"
+                                        title="Nhập lô mới">
+                                        <i class="bi bi-plus-circle"></i>
+                                        </a>
+
+                                        <a href="<?php echo BASE_PATH; ?>/admin/products/edit/<?php echo $row['id_hh']; ?>" class="btn btn-sm btn-info">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+
+                                        <a href="javascript:void(0);" 
+                                        onclick="confirmDelete('<?php echo $row['id_hh']; ?>')" 
+                                        class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php 
+                                endforeach;
+                            else: 
+                            ?>
+                            <tr>
+                                <td colspan="8" class="text-center">Trống.</td>
+                            </tr>
+                            <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
-                
-                <div class="card-footer clearfix">
-                    <?php if ($totalPages > 1): ?>
-                    <ul class="pagination pagination-sm m-0 float-end">
-                        <li class="page-item <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?controller=admin&action=products&page=<?php echo $currentPage - 1; ?>&search=<?php echo $searchKeyword; ?>">&laquo;</a>
-                        </li>
-                        
-                        <?php for ($p = 1; $p <= $totalPages; $p++): ?>
-                            <li class="page-item <?php echo $p == $currentPage ? 'active' : ''; ?>">
-                                <a class="page-link" href="?controller=admin&action=products&page=<?php echo $p; ?>&search=<?php echo $searchKeyword; ?>">
-                                    <?php echo $p; ?>
-                                </a>
-                            </li>
-                        <?php endfor; ?>
-                        
-                        <li class="page-item <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">
-                            <a class="page-link" href="?controller=admin&action=products&page=<?php echo $currentPage + 1; ?>&search=<?php echo $searchKeyword; ?>">&raquo;</a>
-                        </li>
-                    </ul>
-                    <?php endif; ?>
                 </div>
-            </div>
         </div>
     </div>
 </main>
 
-<?php
-require_once __DIR__ . '/../layouts/footer.php';
-?>
-
 <script>
-    function confirmDelete(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
-            window.location.href = '<?php echo BASE_PATH; ?>/admin/products/delete/' + id;
-        }
+function confirmDelete(id) {
+    if (confirm('Bạn có chắc muốn xóa sản phẩm ' + id + '?')) {
+        window.location.href = '<?= BASE_PATH ?>/admin/products/delete/' + id;
     }
+}
 </script>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

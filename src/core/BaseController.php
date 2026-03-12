@@ -120,11 +120,6 @@ abstract class BaseController {
         // Kiểm tra xem mảng 'user' có tồn tại trong session không
         return isset($_SESSION['user']) && !empty($_SESSION['user']);
     }
-
-    /**
-     * Lấy vai trò người dùng
-     * Dựa trên CSDL: ID_ND = 'AD' (Admin) hoặc 'KH' (Khách hàng)
-     */
     protected function getRole() {
         if ($this->isLoggedIn() && isset($_SESSION['user']['id_nd'])) {
             return $_SESSION['user']['id_nd']; // thường thay vì ID_ND

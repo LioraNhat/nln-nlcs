@@ -17,37 +17,27 @@ require_once __DIR__ . '/../partials/header.php';
                         <?php foreach($addresses as $index => $addr): // Đã thêm vòng lặp ?>
                         <div class="form-group-radio">
                             <input type="radio" 
-                                   id="addr_<?php echo $addr['ID_DIA_CHI']; ?>" 
-                                   name="selected_address_id"  /* (TÊN INPUT ĐÚNG) */
-                                   value="<?php echo $addr['ID_DIA_CHI']; ?>"
-                                   <?php 
-                                        // Tự động check radio:
-                                        // 1. Nếu là mặc định
-                                        // 2. Hoặc nếu là cái đầu tiên (khi không có cái nào mặc định)
-                                        if ($addr['IS_DEFAULT'] == 1 || ($index == 0 && !array_filter($addresses, fn($a) => $a['IS_DEFAULT'] == 1))) {
+                                id="addr_<?php echo $addr['id_dc']; ?>" 
+                                name="selected_address_id" 
+                                value="<?php echo $addr['id_dc']; ?>"
+                                <?php 
+                                        if ($addr['mac_dinh'] == 1 || ($index == 0 && !array_filter($addresses, fn($a) => $a['mac_dinh'] == 1))) {
                                             echo 'checked';
                                         }
-                                   ?>
+                                ?>
                             >
-                            <label for="addr_<?php echo $addr['ID_DIA_CHI']; ?>" class="radio-label">
+                            <label for="addr_<?php echo $addr['id_dc']; ?>" class="radio-label">
                                 <strong>
-                                <?php echo htmlspecialchars($addr['TEN_NGUOI_NHAN']); ?>
-                                <?php if ($addr['IS_DEFAULT'] == 1): ?>
+                                <?php echo htmlspecialchars($addr['ten_nguoi_nhan'] ?? ''); ?>
+                                <?php if ($addr['mac_dinh'] == 1): ?>
                                     <span class="default-tag-small">Mặc định</span>
                                 <?php endif; ?>
-
-                                <span class="address-actions">
-                                    <a href="#" class="address-action-link btn-edit-address" 
-                                       data-id="<?php echo $addr['ID_DIA_CHI']; ?>">
-                                       Sửa
-                                    </a>
-                                </span>
                                 </strong><br>
-                                SĐT: <?php echo htmlspecialchars($addr['SDT_GH']); ?><br>
-                                ĐC: <?php echo htmlspecialchars($addr['DIA_CHI_CHI_TIET']); ?>, 
-                                <?php echo htmlspecialchars($addr['TEN_XA_PHUONG']); ?>, 
-                                <?php echo htmlspecialchars($addr['TEN_QUAN_HUYEN']); ?>, 
-                                <?php echo htmlspecialchars($addr['TEN_TINH_TP']); ?>
+                                SĐT: <?php echo htmlspecialchars($addr['sdt_gh'] ?? ''); ?><br>
+                                ĐC: <?php echo htmlspecialchars($addr['dia_chi_chi_tiet'] ?? ''); ?>, 
+                                <?php echo htmlspecialchars($addr['ten_xa_phuong'] ?? ''); ?>, 
+                                <?php echo htmlspecialchars($addr['ten_quan_huyen'] ?? ''); ?>, 
+                                <?php echo htmlspecialchars($addr['ten_tinh_tp'] ?? ''); ?>
                             </label>
                         </div>
                         <?php endforeach; ?>
@@ -70,13 +60,14 @@ require_once __DIR__ . '/../partials/header.php';
                 <div class="payment-methods">
                     <?php foreach ($paymentMethods as $index => $method): ?>
                         <div class="form-group-radio">
-                            <input type="radio" id="pttt_<?php echo $method['ID_PTTT']; ?>" 
-                                   name="payment_method_id" 
-                                   value="<?php echo $method['ID_PTTT']; ?>" 
-                                   <?php if ($index == 0) echo 'checked'; ?>
+                            <input type="radio" 
+                                id="pttt_<?php echo $method['id_pttt']; ?>" <?php // Sửa thành id_pttt ?>
+                                name="payment_method_id" 
+                                value="<?php echo $method['id_pttt']; ?>" <?php // Sửa thành id_pttt ?>
+                                <?php if ($index == 0) echo 'checked'; ?>
                             >
-                            <label for="pttt_<?php echo $method['ID_PTTT']; ?>" class="radio-label">
-                                <?php echo htmlspecialchars($method['TEN_PTTT']); ?>
+                            <label for="pttt_<?php echo $method['id_pttt']; ?>" class="radio-label"> <?php // Sửa thành id_pttt ?>
+                                <?php echo htmlspecialchars($method['ten_pttt'] ?? ''); ?> <?php // Sửa thành ten_pttt ?>
                             </label>
                         </div>
                     <?php endforeach; ?>
@@ -89,14 +80,24 @@ require_once __DIR__ . '/../partials/header.php';
                     
                     <div class="checkout-item-list">
                         <?php foreach ($cartItems as $item): 
+                            // Lấy dữ liệu từ mảng đã định nghĩa trong CartModel
+                            $price = $item['price'] ?? 0;
+                            $quantity = $item['quantity'] ?? 0;
                             $discountPercent = $item['discount_percent'] ?? 0;
-                            $discountedPrice = $item['price'] * (1 - $discountPercent / 100);
+                            
+                            // Tính toán giá sau khi giảm
+                            $discountedPrice = $price * (1 - $discountPercent / 100);
                         ?>
                             <div class="checkout-item">
-                                <img src="<?php echo BASE_PATH; ?>/uploads/<?php echo htmlspecialchars($item['image']); ?>" alt="">
+                                <img src="<?php echo BASE_PATH; ?>/uploads/<?php echo htmlspecialchars($item['image'] ?? ''); ?>" alt="">
                                 <div class="item-info">
-                                    <span class="item-name"><?php echo htmlspecialchars($item['name']); ?> (x<?php echo $item['quantity']; ?>)</span>
-                                    <span class="item-price"><?php echo number_format($discountedPrice * $item['quantity']); ?> đ</span>
+                                    <span class="item-name">
+                                        <?php echo htmlspecialchars($item['name'] ?? 'Sản phẩm'); ?> 
+                                        (x<?php echo $quantity; ?>)
+                                    </span>
+                                    <span class="item-price">
+                                        <?php echo number_format($discountedPrice * $quantity); ?> đ
+                                    </span>
                                 </div>
                             </div>
                         <?php endforeach; ?>

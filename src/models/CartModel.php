@@ -8,7 +8,9 @@ use PDO;
 class CartModel extends BaseModel {
     private function getProductJoins() {
         return "
-            LEFT JOIN lo_hang l ON h.id_hh = l.id_hh
+            LEFT JOIN lo_hang l ON h.id_hh = l.id_hh 
+                AND l.so_luong_con_lai > 0 
+                AND l.hsd_lo >= NOW() -- Chỉ lấy lô còn hàng và còn hạn
             LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
             LEFT JOIN thoi_diem t ON g.id_td = t.id_td
             LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
@@ -29,6 +31,7 @@ class CartModel extends BaseModel {
     public function getCartContentsForUser($id_gh) {
         $sql = "SELECT 
                     ct.id_hh, ct.so_luong,
+                    l.id_lo, -- BẮT BUỘC PHẢI THÊM CỘT NÀY
                     h.ten_hh, h.link_anh,
                     g.gia_hien_tai,
                     IFNULL(km.phan_tram_km, 0) as phan_tram_km
@@ -37,7 +40,7 @@ class CartModel extends BaseModel {
                 " . $this->getProductJoins() . "
                 WHERE ct.id_gh = ?
                 AND h.duoc_phep_ban = 1
-                GROUP BY ct.id_hh";
+                GROUP BY ct.id_hh"; // Lưu ý: Nếu có nhiều lô, GROUP BY có thể gây sai lệch, nhưng tạm thời để thế này.
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$id_gh]);
@@ -47,6 +50,7 @@ class CartModel extends BaseModel {
         foreach ($itemsFromDb as $item) {
             $cartItems[$item['id_hh']] = [
                 'id'               => $item['id_hh'],
+                'id_lo'            => $item['id_lo'], // LƯU VÀO MẢNG ĐỂ TRUYỀN SANG CHECKOUT
                 'name'             => $item['ten_hh'],
                 'price'            => $item['gia_hien_tai'],
                 'image'            => $item['link_anh'],

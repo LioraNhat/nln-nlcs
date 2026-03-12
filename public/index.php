@@ -56,6 +56,7 @@ $router->add('GET', 'admin/products/create', 'AdminController@createProduct');
 $router->add('GET', 'admin/products/delete/{id}', 'AdminController@deleteProduct');
 $router->add('GET', 'admin/products/edit/{id}', 'AdminController@editProduct');
 $router->add('POST', 'admin/products/store', 'AdminController@storeProduct');
+$router->add('POST', 'admin/products/update', 'AdminController@storeProduct');
 
 // --- Quản lý Danh mục (MỚI THÊM) ---
 $router->add('GET', 'admin/categories', 'AdminController@categories');           // Danh sách

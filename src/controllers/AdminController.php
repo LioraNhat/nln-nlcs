@@ -80,36 +80,6 @@ class AdminController extends BaseController {
             'error' => $error
         ]);
     }
-
-    /**
-     * Trang quản lý sản phẩm
-     */
-    public function products() {
-        $productsPerPage = 20;
-        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $searchKeyword = $_GET['search'] ?? '';
-        $offset = ($currentPage - 1) * $productsPerPage;
-        
-        $totalProducts = $this->productModel->countAllProducts($searchKeyword);
-        $totalPages = ceil($totalProducts / $productsPerPage);
-        $products = $this->productModel->getAllProducts($searchKeyword, $productsPerPage, $offset);
-        
-        $success = $_SESSION['success'] ?? null;
-        $error = $_SESSION['error'] ?? null;
-        unset($_SESSION['success'], $_SESSION['error']);
-        
-        $this->renderView('admin/products/index', [
-            'title' => 'Quản lý sản phẩm',
-            'user' => Auth::user(),
-            'products' => $products,
-            'totalPages' => $totalPages,
-            'currentPage' => $currentPage,
-            'searchKeyword' => $searchKeyword,
-            'success' => $success,
-            'error' => $error
-        ]);
-    }
-
     // ======================================================
     // QUẢN LÝ NGƯỜI DÙNG (CHỈNH SỬA)
     // ======================================================
@@ -161,6 +131,31 @@ class AdminController extends BaseController {
             }
             $this->redirect('/admin/users');
         }
+    }
+
+    // QUẢN LÝ HÀNG HÓA
+
+    public function products() {
+        $productsPerPage = 20;
+        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $searchKeyword = $_GET['search'] ?? '';
+        $offset = ($currentPage - 1) * $productsPerPage;
+        
+        $totalProducts = $this->productModel->countAllProducts($searchKeyword);
+        $totalPages = ceil($totalProducts / $productsPerPage);
+        $products = $this->productModel->getAllProducts($searchKeyword, $productsPerPage, $offset);
+
+        $this->renderView('admin/products/index', [
+            'title' => 'Quản lý sản phẩm & Lô hàng',
+            'user' => Auth::user(),
+            'products' => $products,
+            'totalPages' => $totalPages,
+            'currentPage' => $currentPage,
+            'searchKeyword' => $searchKeyword,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
+        ]);
+        unset($_SESSION['success'], $_SESSION['error']);
     }
 
     /**
@@ -245,18 +240,16 @@ class AdminController extends BaseController {
 
             // 4. Gom dữ liệu bảng HÀNG HÓA (Lưu ý: Đã xóa 'gia_ban' khỏi mảng này)
             $data = [
-                'id_hh' => $id,
-                'ten_hh' => $_POST['ten_hh'],
-                'id_lhh' => $_POST['id_lhh'],
-                'id_dvt' => $_POST['id_dvt'],
-                // 'gia_ban' => ...  <-- ĐÃ XÓA DÒNG NÀY ĐỂ TRÁNH LỖI SQL
-                'so_luong_ton' => $_POST['so_luong_ton'],
-                'id_km' => !empty($_POST['id_km']) ? $_POST['id_km'] : null,
-                'mo_ta_hh' => $_POST['mo_ta_hh'],
-                'hsd' => $_POST['hsd'],
-                'duoc_phep_ban' => isset($_POST['duoc_phep_ban']) ? 1 : 0,
-                'link_anh' => $link_anh,
-                'la_hang_sx' => 1 // Mặc định là hàng sx
+                'id_hh'        => $id,
+                'ten_hh'       => $_POST['ten_hh'],
+                'id_loai2'       => $_POST['id_lhh'],
+                'id_dvt'       => $_POST['id_dvt'],
+                'id_km'        => !empty($_POST['id_km']) ? $_POST['id_km'] : null,
+                'mo_ta_hh'     => $_POST['mo_ta_hh'],
+                'duoc_phep_ban'=> isset($_POST['duoc_phep_ban']) ? 1 : 0,
+                'link_anh'     => $link_anh,
+                'la_hang_sx'   => 1,
+                'phan_tram_loi_nhuan' => $_POST['phan_tram_loi_nhuan'] ?? 30
             ];
 
             // 5. GỌI MODEL XỬ LÝ (SỬA ĐOẠN NÀY)
@@ -330,21 +323,21 @@ class AdminController extends BaseController {
     // Xử lý Lưu (Thêm/Sửa)
     public function storeCategory() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'] ?? '';
+            // Lấy ID từ input name="id" trong form
+            $id = $_POST['id'] ?? ''; 
             $ten_dm = trim($_POST['ten_dm']);
 
             if (empty($ten_dm)) {
                 $_SESSION['error'] = "Tên danh mục không được để trống!";
-                $this->redirect($_SERVER['HTTP_REFERER']);
-                return;
+                header('Location: ' . $_SERVER['HTTP_REFERER']);
+                exit;
             }
 
-            if ($id) {
-                // Cập nhật
+            // Kiểm tra thực tế biến $id có giá trị hay không để quyết định Update/Create
+            if (!empty($id)) {
                 $result = $this->categoryModel->updateCategory($id, $ten_dm);
                 $msg = "Cập nhật";
             } else {
-                // Thêm mới
                 $result = $this->categoryModel->createCategory($ten_dm);
                 $msg = "Thêm mới";
             }
@@ -352,10 +345,12 @@ class AdminController extends BaseController {
             if ($result) {
                 $_SESSION['success'] = "$msg danh mục thành công!";
             } else {
-                $_SESSION['error'] = "Có lỗi xảy ra!";
+                $_SESSION['error'] = "Lỗi Database: Không thể $msg danh mục!";
             }
-
-            $this->redirect('/admin/categories');
+            
+            // SỬA TẠI ĐÂY: Dùng đường dẫn đầy đủ để tránh lỗi 404
+            header('Location: ' . BASE_PATH . '/admin/categories');
+            exit;
         }
     }
 
@@ -612,97 +607,87 @@ class AdminController extends BaseController {
     // ======================================================
     // QUẢN LÝ TỒN KHO (INVENTORY / IMPORT SLIPS)
     // ======================================================
-
     public function inventories() {
-        $search = $_GET['search'] ?? '';
-        $slips = $this->inventoryModel->getAllImportSlips($search);
-        
+        $products = $this->inventoryModel->getAllProducts();
+
         $this->renderView('admin/inventories/index', [
-            'title' => 'Quản lý phiếu nhập kho',
+            'title' => 'Quản lý tồn kho',
             'user' => Auth::user(),
-            'slips' => $slips,
-            'searchKeyword' => $search,
+            'products' => $products,
             'success' => $_SESSION['success'] ?? null,
             'error' => $_SESSION['error'] ?? null
         ]);
         unset($_SESSION['success'], $_SESSION['error']);
     }
 
-    public function inventoryDetail($id) {
-        $slip = $this->inventoryModel->getImportSlipById($id);
-        if (!$slip) {
-            $_SESSION['error'] = "Không tìm thấy phiếu nhập!";
-            $this->redirect('/admin/inventories');
-        }
-        $details = $this->inventoryModel->getImportSlipDetails($id);
-
-        $this->renderView('admin/inventories/detail', [
-            'title' => 'Chi tiết phiếu nhập ' . $id,
-            'user' => Auth::user(),
-            'slip' => $slip,
-            'details' => $details
-        ]);
-    }
-
     public function createInventory() {
+        $id_hh = $_GET['id_hh'] ?? '';
+        if (empty($id_hh)) {
+            $_SESSION['error'] = "Thiếu mã sản phẩm!";
+            $this->redirect('/admin/inventories');
+            return;
+        }
+
+        $product = $this->productModel->getProductByIdForAdmin($id_hh);
+        if (!$product) {
+            $_SESSION['error'] = "Không tìm thấy sản phẩm!";
+            $this->redirect('/admin/inventories');
+            return;
+        }
+
+        $lots = $this->inventoryModel->getLotsByProduct($id_hh);
         $suppliers = $this->inventoryModel->getAllSuppliers();
-        $products = $this->inventoryModel->getAllProducts();
+        $promotions = $this->inventoryModel->getActivePromotions();
 
         $this->renderView('admin/inventories/form', [
-            'title' => 'Tạo phiếu nhập kho',
+            'title' => 'Nhập lô mới: ' . $product['ten_hh'],
             'user' => Auth::user(),
+            'product' => $product,
+            'lots' => $lots,
             'suppliers' => $suppliers,
-            'products' => $products
+            'promotions' => $promotions,
+            'success' => $_SESSION['success'] ?? null,
+            'error' => $_SESSION['error'] ?? null
         ]);
+        unset($_SESSION['success'], $_SESSION['error']);
     }
 
     public function storeInventory() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Lấy dữ liệu chung
-            $data = [
-                'id_ncc' => $_POST['id_ncc'],
-                'ngay_lap' => $_POST['ngay_lap'] ?? date('Y-m-d H:i:s'),
-                'chung_tu' => $_POST['chung_tu'] ?? '',
-                'tong_tien' => 0
-            ];
-
-            // Xử lý chi tiết sản phẩm (Mảng từ form)
-            $details = [];
-            $product_ids = $_POST['product_id'] ?? [];
-            $quantities = $_POST['quantity'] ?? [];
-            $prices = $_POST['price'] ?? [];
-            $totalAmount = 0;
-
-            for ($i = 0; $i < count($product_ids); $i++) {
-                if (!empty($product_ids[$i]) && $quantities[$i] > 0) {
-                    $rowTotal = $quantities[$i] * $prices[$i];
-                    $totalAmount += $rowTotal;
-                    
-                    $details[] = [
-                        'id_hh' => $product_ids[$i],
-                        'so_luong' => $quantities[$i],
-                        'don_gia' => $prices[$i]
-                    ];
-                }
-            }
-            $data['tong_tien'] = $totalAmount;
-
-            if (empty($details)) {
-                $_SESSION['error'] = "Vui lòng chọn ít nhất một sản phẩm để nhập!";
-                $this->redirect('/admin/inventories/create');
-                return;
-            }
-
-            $result = $this->inventoryModel->createImportSlip($data, $details);
-
-            if ($result) {
-                $_SESSION['success'] = "Đã nhập kho thành công!";
-                $this->redirect('/admin/inventories');
-            } else {
-                $_SESSION['error'] = "Lỗi khi lưu phiếu nhập!";
-                $this->redirect('/admin/inventories/create');
-            }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect('/admin/inventories');
+            return;
         }
+
+        $id_hh = $_POST['id_hh'] ?? '';
+        $data = [
+            'id_ncc'   => $_POST['id_ncc'],
+            'id_km'    => $_POST['id_km'] ?? '',
+            'hsd_lo'   => $_POST['hsd_lo'],
+            'so_luong' => (int)$_POST['so_luong'],
+            'don_gia'  => (float)$_POST['don_gia'],
+            'gia_ban'  => (float)$_POST['gia_ban'],
+        ];
+
+        $result = $this->inventoryModel->createLot($id_hh, $data);
+
+        if ($result) {
+            $_SESSION['success'] = "Nhập lô hàng mới thành công!";
+        } else {
+            $_SESSION['error'] = "Lỗi khi nhập lô hàng!";
+        }
+        $this->redirect('/admin/inventories/create?id_hh=' . $id_hh);
+    }
+
+    public function inventoryDetail($id) {
+        $lots = $this->inventoryModel->getLotsByProduct($id);
+        $product = $this->productModel->getProductByIdForAdmin($id);
+
+        $this->renderView('admin/inventories/detail', [
+            'title' => 'Chi tiết lô hàng: ' . ($product['ten_hh'] ?? $id),
+            'user' => Auth::user(),
+            'product' => $product,
+            'lots' => $lots
+        ]);
     }
 
     // ======================================================
@@ -826,19 +811,28 @@ class AdminController extends BaseController {
 
     // Xử lý cập nhật trạng thái (POST)
     public function updateOrderStatus() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id_dh'];
-            $status = $_POST['trang_thai'];
+        $id = $_POST['id_dh'] ?? '';
+        $tenTrangThai = $_POST['trang_thai'] ?? '';
 
-            if ($this->orderModel->updateOrderStatus($id, $status)) {
-                $_SESSION['success'] = "Đã cập nhật trạng thái đơn hàng #$id thành công!";
-            } else {
-                $_SESSION['error'] = "Lỗi cập nhật trạng thái!";
-            }
+        // Map tên → mã
+        $map = [
+            'Chờ xử lý'           => 'TTD01',
+            'Đã xác nhận'         => 'TTD02',
+            'Đang giao hàng'      => 'TTD03',
+            'Giao thành công'     => 'TTD04',
+            'Đã hủy'              => 'TTD05',
+        ];
 
-            // Quay lại trang chi tiết
-            $this->redirect("/admin/order-detail/$id");
+        $idTrangThai = $map[$tenTrangThai] ?? 'TTD01';
+
+        $result = $this->orderModel->updateOrderStatus($id, $idTrangThai);
+
+        if ($result) {
+            $_SESSION['success'] = "Cập nhật trạng thái thành công!";
+        } else {
+            $_SESSION['error'] = "Lỗi cập nhật trạng thái!";
         }
+        $this->redirect('/admin/order-detail/' . $id);
     }
 
     /**
@@ -1099,7 +1093,7 @@ class AdminController extends BaseController {
         // 3. Lọc ra địa chỉ mặc định để điền vào ô nhập nhanh (giữ tính năng cũ)
         $defaultAddress = [];
         foreach ($addresses as $addr) {
-            if ($addr['IS_DEFAULT'] == 1) {
+            if ($addr['mac_dinh'] == 1) {
                 $defaultAddress = $addr;
                 break;
             }
@@ -1141,7 +1135,7 @@ class AdminController extends BaseController {
             }
 
             if ($updateUser && $updateAddr) {
-                $_SESSION['user']['HO_TEN'] = $data['ho_ten']; // Cập nhật session
+                $_SESSION['user']['ho_ten'] = $data['ho_ten']; // Cập nhật session
                 $_SESSION['success'] = "Cập nhật hồ sơ và địa chỉ thành công!";
             } else {
                 $_SESSION['error'] = "Có lỗi xảy ra khi cập nhật!";
