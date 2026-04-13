@@ -194,13 +194,20 @@ class ProductModel extends BaseModel {
     // 3. CÁC PHƯƠNG THỨC CHO ADMIN
     // ============================================
     public function getAllProducts($keyword = '', $limit = 20, $offset = 0) {
+        // Sử dụng SUM để tính tổng tồn và MIN để lấy HSD gần nhất
         $sql = "SELECT h.id_hh, h.ten_hh, h.link_anh, h.duoc_phep_ban,
                     lhh.ten_loai, dvt.dvt, g.gia_hien_tai,
-                    l.id_lo, l.hsd_lo, l.so_luong_con_lai as ton_lo
+                    MIN(l.hsd_lo) as hsd_lo, 
+                    SUM(l.so_luong_con_lai) as tong_ton,
+                    (SELECT id_lo FROM lo_hang 
+                        WHERE id_hh = h.id_hh AND so_luong_con_lai > 0 
+                        ORDER BY hsd_lo ASC LIMIT 1) as id_lo
                 FROM hang_hoa h
                 LEFT JOIN loai_hang_hoa lhh ON h.id_loai2 = lhh.id_loai2
                 LEFT JOIN dvt ON h.id_dvt = dvt.id_dvt
+                -- Chỉ JOIN với những lô còn hàng
                 LEFT JOIN lo_hang l ON h.id_hh = l.id_hh AND l.so_luong_con_lai > 0
+                -- Lấy giá bán dựa trên lô sắp hết hạn nhất
                 LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo 
                 WHERE 1=1";
         
@@ -208,6 +215,7 @@ class ProductModel extends BaseModel {
             $sql .= " AND (h.id_hh LIKE :keyword OR h.ten_hh LIKE :keyword)";
         }
 
+        // Quan trọng: Phải GROUP BY theo id_hh để các hàm SUM, MIN hoạt động đúng
         $sql .= " GROUP BY h.id_hh ORDER BY h.id_hh DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $this->db->prepare($sql);
@@ -217,6 +225,7 @@ class ProductModel extends BaseModel {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    
 
     public function getProductByIdForAdmin($productId) {
         $sql = "SELECT h.*, g.gia_hien_tai
@@ -229,6 +238,32 @@ class ProductModel extends BaseModel {
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$productId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Lấy tất cả các lô hàng còn tồn của 1 sản phẩm (Dùng cho AJAX Modal)
+     */
+    public function getBatchesByProductId($productId) {
+        // Sửa ten_trang_thai -> ten_trang_thai_lo
+        // Sửa ngay_nhap -> ngay_lap_phieu_nhap
+        $sql = "SELECT 
+                    lh.*,
+                    ttl.ten_trang_thai_lo, 
+                    pn.ngay_lap_phieu_nhap
+                FROM lo_hang lh
+                LEFT JOIN trang_thai_lo_hang ttl 
+                    ON lh.id_trang_thai_lo = ttl.id_trang_thai_lo
+                LEFT JOIN chi_tiet_phieu_nhap ct 
+                    ON lh.id_lo = ct.id_lo
+                LEFT JOIN phieu_nhap pn 
+                    ON ct.id_pn = pn.id_pn
+                WHERE lh.id_hh = :id_hh 
+                    AND lh.so_luong_con_lai > 0
+                ORDER BY lh.hsd_lo ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id_hh' => $productId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // ============================================
@@ -397,5 +432,57 @@ class ProductModel extends BaseModel {
         $sql = "UPDATE hang_hoa SET id_km = ? WHERE id_loai2 = ?";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([$promoId, $categoryId]);
+    }
+
+    /**
+     * Tính giá vốn bình quân của các lô còn hàng
+     */
+    private function getAverageCostPrice($productId) {
+        // Lấy trung bình cộng gia_von_nhap từ các lô hàng còn số lượng
+        $sql = "SELECT AVG(gia_von_nhap) as avg_cost 
+                FROM lo_hang 
+                WHERE id_hh = :id_hh AND so_luong_con_lai > 0";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id_hh' => $productId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Nếu không có giá vốn (NULL), mặc định trả về 0 hoặc một giá trị an toàn
+        return $result['avg_cost'] ?? 0;
+    }
+
+    public function updatePriceByProfitMargin($productId) {
+        // 1. Lấy phần trăm lợi nhuận mong muốn từ bảng hang_hoa
+        $stmtHh = $this->db->prepare("SELECT phan_tram_loi_nhuan FROM hang_hoa WHERE id_hh = ?");
+        $stmtHh->execute([$productId]);
+        $hh = $stmtHh->fetch(PDO::FETCH_ASSOC);
+        
+        // Mặc định là 30% nếu không có dữ liệu
+        $profitMargin = isset($hh['phan_tram_loi_nhuan']) ? ($hh['phan_tram_loi_nhuan'] / 100) : 0.3;
+
+        // 2. Tính giá vốn bình quân
+        $avgCost = $this->getAverageCostPrice($productId);
+        if ($avgCost <= 0) return false; // Không có giá vốn thì không tính được giá bán
+
+        // 3. Tính giá bán mới: Giá vốn + (Giá vốn * % Lợi nhuận)
+        // Hoặc dùng công thức: Giá vốn * (1 + % Lợi nhuận)
+        $calculatedPrice = $avgCost * (1 + $profitMargin);
+
+        // Làm tròn đến hàng trăm cho đẹp (Ví dụ: 35678 -> 35700)
+        $calculatedPrice = ceil($calculatedPrice / 100) * 100;
+
+        // 4. Tìm lô hàng mới nhất để gắn giá vào (logic cũ của bạn)
+        $timeId = $this->getCurrentTimeId();
+        $stmtLo = $this->db->prepare("SELECT id_lo FROM lo_hang WHERE id_hh = ? ORDER BY hsd_lo DESC LIMIT 1");
+        $stmtLo->execute([$productId]);
+        $lo = $stmtLo->fetch(PDO::FETCH_ASSOC);
+
+        if (!$lo) return false;
+
+        // 5. Cập nhật vào bảng gia_ban_hien_tai
+        $sql = "INSERT INTO gia_ban_hien_tai (id_lo, id_td, gia_hien_tai) 
+                VALUES (?, ?, ?)
+                ON DUPLICATE KEY UPDATE gia_hien_tai = VALUES(gia_hien_tai)";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$lo['id_lo'], $timeId, $calculatedPrice]);
     }
 }

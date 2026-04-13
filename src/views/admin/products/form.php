@@ -27,18 +27,18 @@ $formTitle = $isEdit ? "Cập nhật Sản phẩm: " . htmlspecialchars($product
 
     <div class="app-content">
         <div class="container-fluid">
-            <form action="<?php echo BASE_PATH; ?>/admin/products/<?php echo $isEdit ? 'update' : 'store'; ?>" method="POST" enctype="multipart/form-data">
+            <form action="<?php echo BASE_PATH; ?>/admin/products/store" method="POST" enctype="multipart/form-data">
                 
                 <input type="hidden" name="id" value="<?php echo $isEdit ? ($product['id_hh'] ?? '') : ''; ?>">
 
-                <div class="card card-outline card-primary">
+                <div class="card card-outline card-primary shadow-sm">
                     <div class="card-header">
-                        <h3 class="card-title">Thông tin chi tiết hàng hóa</h3>
+                        <h3 class="card-title fw-bold">Thông tin chi tiết hàng hóa</h3>
                     </div>
                     
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-8">
+                            <div class="col-md-8 border-end">
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">Tên sản phẩm <span class="text-danger">*</span></label>
                                     <input type="text" name="ten_hh" class="form-control" required 
@@ -79,33 +79,33 @@ $formTitle = $isEdit ? "Cập nhật Sản phẩm: " . htmlspecialchars($product
 
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">Mô tả sản phẩm</label>
-                                    <textarea name="mo_ta_hh" class="form-control" rows="6" placeholder="Thành phần, định lượng, cách chế biến..."><?php echo $isEdit ? htmlspecialchars($product['mo_ta_hh'] ?? '') : ''; ?></textarea>
+                                    <textarea name="mo_ta_hh" class="form-control" rows="6" 
+                                              placeholder="Thành phần, định lượng, cách chế biến..."><?php echo $isEdit ? htmlspecialchars($product['mo_ta_hh'] ?? '') : ''; ?></textarea>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <div class="form-group mb-3">
-                                    <label class="form-label fw-bold">Giá bán hiện tại (VNĐ) <span class="text-danger">*</span></label>
-                                    <input type="number" name="gia_ban" class="form-control" required 
-                                           value="<?php echo $isEdit ? intval($product['gia_hien_tai'] ?? 0) : ''; ?>">
-                                </div>
-
-                                <div class="form-group mb-3">
-                                    <label class="form-label fw-bold">% Lợi nhuận mong muốn</label>
-                                    <div class="input-group">
-                                        <input type="number" name="phan_tram_loi_nhuan" class="form-control" 
-                                               min="0" max="100" step="0.01"
-                                               value="<?php echo $isEdit ? ($product['phan_tram_loi_nhuan'] ?? 30) : 30; ?>">
-                                        <span class="input-group-text">%</span>
-                                    </div>
-                                    <small class="text-muted">Dùng để tính giá bán đề xuất dựa trên giá nhập.</small>
-                                </div>
-
-                                <div class="form-group mb-4">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" name="duoc_phep_ban" value="1"
-                                            <?php echo (!$isEdit || ($isEdit && ($product['duoc_phep_ban'] ?? 0) == 1)) ? 'checked' : ''; ?>>
-                                        <label class="form-check-label fw-bold">Cho phép kinh doanh</label>
+                                <div class="card bg-light mb-3">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold text-primary"><i class="bi bi-info-circle"></i> Cơ chế giá bán</h6>
+                                        <small class="text-muted d-block mb-2">
+                                            Giá bán sẽ tự động tính khi bạn thực hiện <strong>Nhập lô hàng</strong>.
+                                        </small>
+                                        <hr>
+                                        <div class="form-group mb-0">
+                                            <label class="form-label fw-bold">% Lợi nhuận <span class="text-danger">*</span></label>
+                                            <div class="input-group mb-2">
+                                                <input type="number" name="phan_tram_loi_nhuan" class="form-control" 
+                                                       min="0" max="1000" step="0.01" required
+                                                       value="<?php echo $isEdit ? ($product['phan_tram_loi_nhuan'] ?? 30) : 30; ?>">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" name="duoc_phep_ban" value="1"
+                                                    <?php echo (!$isEdit || ($isEdit && ($product['duoc_phep_ban'] ?? 0) == 1)) ? 'checked' : ''; ?>>
+                                                <label class="form-check-label fw-bold small">Cho phép bán</label>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -122,7 +122,7 @@ $formTitle = $isEdit ? "Cập nhật Sản phẩm: " . htmlspecialchars($product
                                                 : BASE_PATH . '/admin_assets/assets/img/default-150x150.png'; 
                                         ?>
                                         <img id="preview" src="<?php echo $imgSrc; ?>" alt="Preview" 
-                                             style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                                             style="max-width: 100%; max-height: 200px; object-fit: contain;" class="rounded shadow-sm">
                                     </div>
                                 </div>
                             </div>
@@ -142,6 +142,7 @@ $formTitle = $isEdit ? "Cập nhật Sản phẩm: " . htmlspecialchars($product
 </main>
 
 <script>
+// Hàm xử lý xem trước ảnh khi chọn file
 function previewImage(input) {
     if (input.files && input.files[0]) {
         var reader = new FileReader();

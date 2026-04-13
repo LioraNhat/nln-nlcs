@@ -220,6 +220,13 @@ img {
     font-weight: 700;
 }
 
+#voice-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    margin-right: 5px;
+    font-size: 18px;
+}
 /* ========================================= */
 /* 9. MENU DỌC (VERTICAL NAV - DANH MỤC)     */
 /* ========================================= */

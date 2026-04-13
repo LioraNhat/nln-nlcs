@@ -31,7 +31,7 @@ $router->add('POST', 'auth/handleRegister', 'AuthController@handleRegister'); //
 $router->add('POST', 'auth/logout', 'AuthController@logout'); 
 
 // Thêm route tìm kiếm sản phẩm (Front-end)
-$router->add('GET', 'search', 'ProductController@search');
+$router->add('GET', 'search', 'SearchController@search');
 
 // ==================================================================
 // 2. NHÓM CHỨC NĂNG TÀI KHOẢN
@@ -114,6 +114,19 @@ $router->add('POST', 'admin/settings/update', 'AdminController@updateSettings');
 // --- Hồ sơ Admin ---
 $router->add('GET', 'admin/profile', 'AdminController@profile');
 $router->add('POST', 'admin/profile/update', 'AdminController@updateProfile');
+
+// --- Thanh toán ZaloPay ---
+$router->add('POST', 'payment/zalopay',    'PaymentController@createZaloPayOrder');
+$router->add('POST', 'payment/callback',   'PaymentController@callback');
+$router->add('GET',  'payment/result',     'PaymentController@result');
+
+// SỬA LẠI ĐOẠN NÀY
+// Route lấy JSON danh sách lô (Xóa dấu / ở trước chữ admin)
+$router->add('GET', 'admin/inventories/get-batches-json', 'AdminController@getBatchesJson');
+
+// Các route cập nhật và xóa (Xóa dấu / ở trước chữ admin)
+$router->add('POST', 'admin/inventories/update-batch', 'AdminController@updateBatch');
+$router->add('GET', 'admin/inventories/delete-batch', 'AdminController@deleteBatch');
 
 // KHỞI CHẠY
 $router->run();

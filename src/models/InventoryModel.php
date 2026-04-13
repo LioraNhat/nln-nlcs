@@ -5,39 +5,101 @@ use PDO;
 
 class InventoryModel extends BaseModel {
 
-    // Lấy danh sách hàng hóa kèm lô hàng gần hết hạn nhất
+    // ✅ SỬA: subquery gia_hien_tai lọc đúng thoi_diem hiện tại + tồn > 0
     public function getAllProducts() {
-        $sql = "SELECT h.id_hh, h.ten_hh, h.link_anh,
-                    lhh.ten_loai, dvt.dvt,
-                    l.id_lo, l.hsd_lo, l.so_luong_con_lai, l.id_trang_thai_lo,
-                    ttl.ten_trang_thai_lo,
-                    g.gia_hien_tai
+        $sql = "SELECT h.id_hh, h.ten_hh, h.link_anh, lhh.ten_loai, dvt.dvt,
+                    COUNT(l.id_lo) as so_luong_lo,
+                    MIN(CASE WHEN l.so_luong_con_lai > 0 THEN l.hsd_lo ELSE NULL END) as hsd_gan_nhat,
+                    SUM(l.so_luong_con_lai) as tong_ton_kho,
+                    (SELECT g.gia_hien_tai 
+                        FROM gia_ban_hien_tai g 
+                        JOIN lo_hang l2 ON g.id_lo = l2.id_lo
+                        JOIN thoi_diem td ON g.id_td = td.id_td
+                        WHERE l2.id_hh = h.id_hh 
+                          AND NOW() BETWEEN td.ngay_bd_gia_ban AND td.ngay_kt_gia_ban
+                          AND l2.so_luong_con_lai > 0
+                        ORDER BY l2.hsd_lo ASC 
+                        LIMIT 1
+                    ) as gia_hien_tai
                 FROM hang_hoa h
                 LEFT JOIN loai_hang_hoa lhh ON h.id_loai2 = lhh.id_loai2
                 LEFT JOIN dvt ON h.id_dvt = dvt.id_dvt
                 LEFT JOIN lo_hang l ON h.id_hh = l.id_hh
-                    AND l.hsd_lo = (
-                        SELECT MIN(hsd_lo) FROM lo_hang 
-                        WHERE id_hh = h.id_hh AND so_luong_con_lai > 0
-                    )
-                LEFT JOIN trang_thai_lo_hang ttl ON l.id_trang_thai_lo = ttl.id_trang_thai_lo
+                WHERE h.duoc_phep_ban = 1
+                GROUP BY h.id_hh, h.ten_hh, h.link_anh, lhh.ten_loai, dvt.dvt
+                ORDER BY h.id_hh DESC";
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Lấy danh sách lô cho AJAX (modal trang Index)
+    public function getBatchesByProductId($id_hh) {
+        $sql = "SELECT l.*, ttl.ten_trang_thai_lo,
+                    g.gia_hien_tai,
+                    km.ten_km, km.phan_tram_km,
+                    pn.ngay_lap_phieu_nhap,
+                    ncc.ten_ncc
+                FROM lo_hang l
+                JOIN trang_thai_lo_hang ttl ON l.id_trang_thai_lo = ttl.id_trang_thai_lo
                 LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
                     AND g.id_td = (
                         SELECT id_td FROM thoi_diem 
                         WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban 
                         LIMIT 1
                     )
-                WHERE h.duoc_phep_ban = 1
-                GROUP BY h.id_hh
+                LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
+                LEFT JOIN phieu_nhap pn ON l.id_pn = pn.id_pn
+                LEFT JOIN nha_cung_cap ncc ON pn.id_ncc = ncc.id_ncc
+                WHERE l.id_hh = :id_hh
                 ORDER BY l.hsd_lo ASC";
-
-        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':id_hh' => $id_hh]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Lấy tất cả lô hàng của 1 sản phẩm
+    // Xóa lô hàng
+    public function deleteLot($id_lo) {
+        try {
+            $this->db->beginTransaction();
+            $this->db->prepare("DELETE FROM gia_ban_hien_tai WHERE id_lo = ?")->execute([$id_lo]);
+            $this->db->prepare("DELETE FROM chi_tiet_phieu_nhap WHERE id_lo = ?")->execute([$id_lo]);
+            $res = $this->db->prepare("DELETE FROM lo_hang WHERE id_lo = ?")->execute([$id_lo]);
+            $this->db->commit();
+            return $res;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
+
+    // Cập nhật lô từ Modal (Index page)
+    public function updateLotInfo($id_lo, $data) {
+        try {
+            $sql = "UPDATE lo_hang 
+                    SET hsd_lo = :hsd, 
+                        so_luong_con_lai = :qty, 
+                        id_trang_thai_lo = :status 
+                    WHERE id_lo = :id_lo";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':hsd'    => $data['hsd_lo'],
+                ':qty'    => $data['so_luong_con_lai'],
+                ':status' => $data['id_trang_thai_lo'],
+                ':id_lo'  => $id_lo
+            ]);
+        } catch (\PDOException $e) {
+            error_log("Lỗi UpdateLotInfo: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // Lấy lô theo sản phẩm cho trang Detail
     public function getLotsByProduct($id_hh) {
-        $sql = "SELECT l.*, ttl.ten_trang_thai_lo, g.gia_hien_tai,
-                    km.ten_km, km.phan_tram_km
+        $sql = "SELECT l.*,
+                    ttl.ten_trang_thai_lo,
+                    g.gia_hien_tai,
+                    km.ten_km, km.phan_tram_km,
+                    pn.ngay_lap_phieu_nhap,
+                    ncc.ten_ncc
                 FROM lo_hang l
                 LEFT JOIN trang_thai_lo_hang ttl ON l.id_trang_thai_lo = ttl.id_trang_thai_lo
                 LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
@@ -47,6 +109,8 @@ class InventoryModel extends BaseModel {
                         LIMIT 1
                     )
                 LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
+                LEFT JOIN phieu_nhap pn ON l.id_pn = pn.id_pn
+                LEFT JOIN nha_cung_cap ncc ON pn.id_ncc = ncc.id_ncc
                 WHERE l.id_hh = :id_hh
                 ORDER BY l.hsd_lo ASC";
 
@@ -55,88 +119,100 @@ class InventoryModel extends BaseModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Lấy tất cả nhà cung cấp
     public function getAllSuppliers() {
         return $this->db->query("SELECT * FROM nha_cung_cap ORDER BY ten_ncc ASC")
                         ->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Lấy tất cả khuyến mãi đang hoạt động
     public function getActivePromotions() {
-        return $this->db->query("SELECT * FROM khuyen_mai WHERE trang_thai_km = 1")
+        return $this->db->query("SELECT * FROM khuyen_mai ORDER BY ngay_bd_km DESC")
                         ->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Sinh mã lô mới cho 1 sản phẩm
     public function generateLotId($id_hh) {
-        $stmt = $this->db->prepare(
-            "SELECT COUNT(*) as total FROM lo_hang WHERE id_hh = ?"
-        );
-        $stmt->execute([$id_hh]);
-        $count = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-        $suffix = chr(65 + $count); // A, B, C...
-        return $id_hh . 'B' . date('ymd') . $suffix;
+        $short_id_hh = substr($id_hh, -3);
+        $separator   = 'B';
+        $time_part   = date('dHi');
+        return $short_id_hh . $separator . $time_part;
     }
 
-    // Thêm lô hàng mới + phiếu nhập
     public function createLot($id_hh, $data) {
         try {
             $this->db->beginTransaction();
 
-            // 1. Sinh mã phiếu nhập
-            $stmt = $this->db->query("SELECT MAX(id_pn) as max_id FROM phieu_nhap");
-            $maxId = $stmt->fetch(PDO::FETCH_ASSOC)['max_id'];
-            $num = $maxId ? (int)substr($maxId, 2) + 1 : 1;
-            $id_pn = 'PN' . str_pad($num, 7, '0', STR_PAD_LEFT);
+            // 1. Lấy % lợi nhuận
+            $stmtHh = $this->db->prepare("SELECT phan_tram_loi_nhuan FROM hang_hoa WHERE id_hh = ?");
+            $stmtHh->execute([$id_hh]);
+            $productInfo  = $stmtHh->fetch(PDO::FETCH_ASSOC);
+            $profitMargin = $productInfo ? (float)$productInfo['phan_tram_loi_nhuan'] : 30.0;
 
-            // 2. Insert phieu_nhap
-            $this->db->prepare(
-                "INSERT INTO phieu_nhap (id_pn, id_ncc, ngay_lap_phieu_nhap, tong_tien_nhap) 
-                 VALUES (?, ?, NOW(), ?)"
-            )->execute([$id_pn, $data['id_ncc'], $data['don_gia'] * $data['so_luong']]);
+            // 2. Tính giá bán
+            $calculatedPrice = $data['don_gia'] * (1 + ($profitMargin / 100));
 
-            // 3. Sinh mã lô
+            // 3. Sinh mã phiếu nhập
+            $stmtPn = $this->db->query("SELECT id_pn FROM phieu_nhap ORDER BY id_pn DESC LIMIT 1");
+            $lastPn = $stmtPn->fetch(PDO::FETCH_ASSOC);
+            $num    = $lastPn ? (int)substr($lastPn['id_pn'], 2) + 1 : 1;
+            $id_pn  = 'PN' . str_pad($num, 7, '0', STR_PAD_LEFT);
+
+            // 4. Lưu phiếu nhập
+            $tong_tien = $data['don_gia'] * $data['so_luong'];
+            $this->db->prepare("INSERT INTO phieu_nhap (id_pn, id_ncc, ngay_lap_phieu_nhap, tong_tien_nhap) VALUES (?, ?, NOW(), ?)")
+                     ->execute([$id_pn, $data['id_ncc'], $tong_tien]);
+
+            // 5. Lưu lô hàng
             $id_lo = $this->generateLotId($id_hh);
+            $this->db->prepare("INSERT INTO lo_hang (id_lo, id_hh, id_pn, id_km, id_trang_thai_lo, hsd_lo, so_luong_nhap, so_luong_con_lai, gia_von_nhap) VALUES (?, ?, ?, ?, 'TTL01', ?, ?, ?, ?)")
+                     ->execute([
+                         $id_lo, $id_hh, $id_pn,
+                         !empty($data['id_km']) ? $data['id_km'] : null,
+                         $data['hsd_lo'], $data['so_luong'], $data['so_luong'], $data['don_gia']
+                     ]);
 
-            // 4. Insert lo_hang
-            $this->db->prepare(
-                "INSERT INTO lo_hang (id_lo, id_hh, id_pn, id_km, id_trang_thai_lo, 
-                                      hsd_lo, so_luong_nhap, so_luong_con_lai, gia_von_nhap)
-                 VALUES (?, ?, ?, ?, 'TTL01', ?, ?, ?, ?)"
-            )->execute([
-                $id_lo, $id_hh, $id_pn,
-                !empty($data['id_km']) ? $data['id_km'] : null,
-                $data['hsd_lo'],
-                $data['so_luong'],
-                $data['so_luong'],
-                $data['don_gia']
-            ]);
+            // 6. Chi tiết phiếu nhập
+            $this->db->prepare("INSERT INTO chi_tiet_phieu_nhap (id_pn, id_hh, id_lo, so_luong_nhap_lo, don_gia_nhap_lo) VALUES (?, ?, ?, ?, ?)")
+                     ->execute([$id_pn, $id_hh, $id_lo, $data['so_luong'], $data['don_gia']]);
 
-            // 5. Insert chi_tiet_phieu_nhap
-            $this->db->prepare(
-                "INSERT INTO chi_tiet_phieu_nhap (id_pn, id_hh, id_lo, so_luong_nhap_lo, don_gia_nhap_lo)
-                 VALUES (?, ?, ?, ?, ?)"
-            )->execute([$id_pn, $id_hh, $id_lo, $data['so_luong'], $data['don_gia']]);
+            // 7. Lấy thời điểm hiện tại
+            $stmtTd = $this->db->prepare("SELECT id_td FROM thoi_diem WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban LIMIT 1");
+            $stmtTd->execute();
+            $td = $stmtTd->fetch(PDO::FETCH_ASSOC);
+            if (!$td) {
+                $td = $this->db->query("SELECT id_td FROM thoi_diem ORDER BY ngay_bd_gia_ban DESC LIMIT 1")
+                               ->fetch(PDO::FETCH_ASSOC);
+            }
+            $id_td = $td ? $td['id_td'] : 'TD001';
 
-            // 6. Insert gia_ban_hien_tai
-            $stmt = $this->db->prepare(
-                "SELECT id_td FROM thoi_diem 
-                 WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban LIMIT 1"
-            );
-            $stmt->execute();
-            $td = $stmt->fetch(PDO::FETCH_ASSOC);
-            $id_td = $td ? $td['id_td'] : 'TD005';
-
-            $this->db->prepare(
-                "INSERT INTO gia_ban_hien_tai (id_lo, id_td, gia_hien_tai) VALUES (?, ?, ?)"
-            )->execute([$id_lo, $id_td, $data['gia_ban']]);
+            // 8. Lưu giá bán
+            $this->db->prepare("INSERT INTO gia_ban_hien_tai (id_lo, id_td, gia_hien_tai) VALUES (?, ?, ?)")
+                     ->execute([$id_lo, $id_td, $calculatedPrice]);
 
             $this->db->commit();
             return true;
 
         } catch (\Exception $e) {
             $this->db->rollBack();
-            error_log($e->getMessage());
+            error_log("Lỗi CreateLot: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateLot($id_lo, $data) {
+        try {
+            $sql = "UPDATE lo_hang 
+                    SET hsd_lo = :hsd, 
+                        so_luong_con_lai = :qty, 
+                        gia_von_nhap = :price 
+                    WHERE id_lo = :id_lo";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                ':hsd'   => $data['hsd_lo'],
+                ':qty'   => $data['so_luong_con_lai'],
+                ':price' => $data['gia_von_nhap'],
+                ':id_lo' => $id_lo
+            ]);
+        } catch (\PDOException $e) {
+            error_log("Lỗi UpdateLot: " . $e->getMessage());
             return false;
         }
     }

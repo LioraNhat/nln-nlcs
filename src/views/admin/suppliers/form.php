@@ -24,19 +24,20 @@ $isEdit = $isEdit ?? false;
         <div class="container-fluid">
             <div class="card card-outline card-info">
                 <div class="card-body">
-                    <form action="<?= BASE_PATH ?>/admin/suppliers/store" method="POST">
-                        <?php if ($isEdit): ?>
-                            <input type="hidden" name="id" value="<?= $supplier['ID_NCC'] ?>">
+                    <form action="<?= BASE_PATH ?>/admin/suppliers/<?= $isEdit ? 'update' : 'store' ?>" method="POST">
+                        
+                        <?php if ($isEdit && isset($supplier)): ?>
+                            <input type="hidden" name="id" value="<?= $supplier['id_ncc'] ?>">
                             <div class="form-group mb-3">
                                 <label class="form-label fw-bold">Mã NCC:</label>
-                                <input type="text" class="form-control" value="<?= $supplier['ID_NCC'] ?>" disabled>
+                                <input type="text" class="form-control" value="<?= $supplier['id_ncc'] ?>" disabled>
                             </div>
                         <?php endif; ?>
 
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Tên Nhà cung cấp <span class="text-danger">*</span></label>
                             <input type="text" name="ten_ncc" class="form-control" 
-                                   value="<?= $isEdit ? htmlspecialchars($supplier['TEN_NCC']) : '' ?>" 
+                                   value="<?= $isEdit ? htmlspecialchars($supplier['ten_ncc'] ?? '') : '' ?>" 
                                    required placeholder="Ví dụ: Công ty C.P Việt Nam">
                         </div>
 
@@ -44,18 +45,18 @@ $isEdit = $isEdit ?? false;
                             <div class="col-md-6 form-group mb-3">
                                 <label class="form-label fw-bold">Số điện thoại <span class="text-danger">*</span></label>
                                 <input type="text" name="sdt" class="form-control" 
-                                       value="<?= $isEdit ? htmlspecialchars($supplier['SDT_NCC']) : '' ?>" required>
+                                       value="<?= $isEdit ? htmlspecialchars($supplier['sdt_ncc'] ?? '') : '' ?>" required>
                             </div>
                             <div class="col-md-6 form-group mb-3">
                                 <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
                                 <input type="email" name="email" class="form-control" 
-                                       value="<?= $isEdit ? htmlspecialchars($supplier['EMAIL_NCC']) : '' ?>" required>
+                                       value="<?= $isEdit ? htmlspecialchars($supplier['email_ncc'] ?? '') : '' ?>" required>
                             </div>
                         </div>
 
                         <div class="form-group mb-3">
                             <label class="form-label fw-bold">Địa chỉ chi tiết <span class="text-danger">*</span></label>
-                            <textarea name="dia_chi" class="form-control" rows="3" required><?= $isEdit ? htmlspecialchars($supplier['DIA_CHI_NCC']) : '' ?></textarea>
+                            <textarea name="dia_chi" class="form-control" rows="3" required><?= $isEdit ? htmlspecialchars($supplier['dia_chi_ncc'] ?? '') : '' ?></textarea>
                         </div>
 
                         <div class="card-footer bg-white ps-0 text-end">

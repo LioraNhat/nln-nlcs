@@ -48,9 +48,17 @@
                         <?php endif; ?>
 
                     <?php else: ?>
-
                         <span style="color:red;">Chưa thanh toán</span>
 
+                        <?php if (($order['id_pttt'] ?? '') == 'PTTT4' && ($order['id_ttd'] ?? '') != 'TTD05'): ?>
+                            <br><br>
+                            <form action="<?= BASE_PATH ?>/payment/zalopay" method="POST">
+                                <input type="hidden" name="id_dh" value="<?= $order['id_dh'] ?>">
+                                <button type="submit" style="background:#0068ff;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-weight:bold;cursor:pointer;">
+                                    💙 Thanh toán qua ZaloPay
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </p>
             </div>

@@ -28,7 +28,17 @@
         </a>
         
         <form class="search-bar" action="<?php echo BASE_PATH; ?>/search" method="GET">
-            <input type="text" placeholder="Tìm tôm, cua, cá, rau củ..." name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>">
+            <input type="text" id="voice-search-input"
+                placeholder="Tìm tôm, cua, cá, rau củ..." 
+                name="q" 
+                value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>">
+
+            <!-- Nút micro -->
+            <button type="button" id="voice-btn" title="Tìm bằng giọng nói">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+
+            <!-- Nút search -->
             <button type="submit">
                 <i class="fa-solid fa-magnifying-glass"></i>
             </button> 
@@ -123,3 +133,45 @@
     </div>
 </nav>
 <main></main>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("voice-btn");
+    const input = document.getElementById("voice-search-input");
+
+    // Kiểm tra trình duyệt hỗ trợ
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        btn.style.display = "none";
+        console.warn("Trình duyệt không hỗ trợ voice search");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "vi-VN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    btn.addEventListener("click", () => {
+        recognition.start();
+        btn.innerHTML = '<i class="fa-solid fa-microphone-lines text-danger"></i>';
+    });
+
+    recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+
+        // auto submit form
+        input.form.submit();
+    };
+
+    recognition.onend = function () {
+        btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+    };
+
+    recognition.onerror = function () {
+        alert("Không nhận diện được giọng nói");
+    };
+});
+</script>

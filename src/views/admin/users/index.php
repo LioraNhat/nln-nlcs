@@ -23,7 +23,9 @@
             <div class="card mb-3">
                 <div class="card-body py-2">
                     <form method="GET" class="row g-2">
-                        <div class="col-auto"><input type="text" name="search" class="form-control form-control-sm" placeholder="Tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>"></div>
+                        <div class="col-auto">
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Tìm kiếm..." value="<?= htmlspecialchars($searchKeyword) ?>">
+                        </div>
                         <div class="col-auto"><button type="submit" class="btn btn-sm btn-primary">Tìm</button></div>
                     </form>
                 </div>
@@ -50,16 +52,16 @@
                             <?php else: ?>
                                 <?php foreach ($customers as $u): ?>
                                 <tr>
-                                    <td><?= $u['ID_TK'] ?></td>
-                                    <td><?= htmlspecialchars($u['HO_TEN']) ?></td>
-                                    <td><?= htmlspecialchars($u['EMAIL']) ?></td>
-                                    <td><?= htmlspecialchars($u['SDT_TK']) ?></td>
+                                    <td><?= $u['id_tk'] ?></td>
+                                    <td><?= htmlspecialchars($u['ho_ten'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($u['email_tk'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($u['sdt_tk'] ?? '') ?></td>
                                     <td class="text-center">
-                                        <a href="<?= BASE_PATH ?>/admin/users/edit/<?= $u['ID_TK'] ?>" class="btn btn-sm btn-warning" title="Sửa"><i class="bi bi-pencil"></i></a>
-                                        <a href="<?= BASE_PATH ?>/admin/users/delete/<?= $u['ID_TK'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Xóa khách hàng này?');" title="Xóa"><i class="bi bi-trash"></i></a>
+                                        <a href="<?= BASE_PATH ?>/admin/users/edit/<?= $u['id_tk'] ?>" class="btn btn-sm btn-warning" title="Sửa"><i class="bi bi-pencil"></i></a>
+                                        <a href="<?= BASE_PATH ?>/admin/users/delete/<?= $u['id_tk'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Xóa khách hàng này?');" title="Xóa"><i class="bi bi-trash"></i></a>
                                         
                                         <form action="<?= BASE_PATH ?>/admin/users/update-role" method="POST" style="display:inline-block;" onsubmit="return confirm('Bạn muốn cấp quyền Admin cho người này?');">
-                                            <input type="hidden" name="user_id" value="<?= $u['ID_TK'] ?>">
+                                            <input type="hidden" name="user_id" value="<?= $u['id_tk'] ?>">
                                             <input type="hidden" name="role_id" value="AD">
                                             <button type="submit" class="btn btn-sm btn-dark" title="Thăng chức Admin"><i class="bi bi-arrow-up-circle"></i></button>
                                         </form>
@@ -94,7 +96,8 @@
                                 <th>ID</th>
                                 <th>Họ tên</th>
                                 <th>Email</th>
-                                <th>Phân quyền</th> <th class="text-center">Hành động</th>
+                                <th>Phân quyền</th>
+                                <th class="text-center">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -103,13 +106,12 @@
                             <?php else: ?>
                                 <?php foreach ($admins as $ad): ?>
                                 <tr>
-                                    <td><?= $ad['ID_TK'] ?></td>
-                                    <td class="fw-bold text-primary"><?= htmlspecialchars($ad['HO_TEN']) ?></td>
-                                    <td><?= htmlspecialchars($ad['EMAIL']) ?></td>
-                                    
+                                    <td><?= $ad['id_tk'] ?></td>
+                                    <td class="fw-bold text-primary"><?= htmlspecialchars($ad['ho_ten'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($ad['email_tk'] ?? '') ?></td>
                                     <td>
                                         <form action="<?= BASE_PATH ?>/admin/users/update-role" method="POST" class="d-flex">
-                                            <input type="hidden" name="user_id" value="<?= $ad['ID_TK'] ?>">
+                                            <input type="hidden" name="user_id" value="<?= $ad['id_tk'] ?>">
                                             <select name="role_id" class="form-select form-select-sm me-2" style="width: 130px;">
                                                 <option value="AD" selected>Admin</option>
                                                 <option value="KH">Khách hàng</option>
@@ -117,11 +119,14 @@
                                             <button type="submit" class="btn btn-sm btn-outline-primary">Lưu</button>
                                         </form>
                                     </td>
-
                                     <td class="text-center">
-                                        <a href="<?= BASE_PATH ?>/admin/users/edit/<?= $ad['ID_TK'] ?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
-                                        <?php if($ad['ID_TK'] !== $_SESSION['user']['ID_TK']): ?>
-                                            <a href="<?= BASE_PATH ?>/admin/users/delete/<?= $ad['ID_TK'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Xóa Admin này?');"><i class="bi bi-trash"></i></a>
+                                        <a href="<?= BASE_PATH ?>/admin/users/edit/<?= $ad['id_tk'] ?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil"></i></a>
+                                        <?php 
+                                            // Kiểm tra ID trong session cũng phải dùng chữ thường hoặc chữ hoa tùy theo cách bạn lưu session
+                                            $sessionUserId = $_SESSION['user']['id_tk'] ?? $_SESSION['user']['ID_TK'] ?? '';
+                                            if($ad['id_tk'] !== $sessionUserId): 
+                                        ?>
+                                            <a href="<?= BASE_PATH ?>/admin/users/delete/<?= $ad['id_tk'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Xóa Admin này?');"><i class="bi bi-trash"></i></a>
                                         <?php else: ?>
                                             <span class="badge bg-secondary">Bạn</span>
                                         <?php endif; ?>

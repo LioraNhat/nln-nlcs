@@ -14,36 +14,36 @@
         <div class="container-fluid">
             <div class="card card-primary card-outline">
                 <form action="<?= BASE_PATH ?>/admin/users/update" method="POST">
-                    <input type="hidden" name="id" value="<?= $customer['ID_TK'] ?>">
+                    <input type="hidden" name="id" value="<?= $customer['id_tk'] ?>">
                     
                     <div class="card-body">
                         <div class="form-group mb-3">
                             <label class="fw-bold">ID Tài khoản</label>
-                            <input type="text" class="form-control" value="<?= $customer['ID_TK'] ?>" disabled>
+                            <input type="text" class="form-control" value="<?= $customer['id_tk'] ?>" disabled>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 form-group mb-3">
                                 <label class="fw-bold">Họ và tên <span class="text-danger">*</span></label>
-                                <input type="text" name="ho_ten" class="form-control" value="<?= htmlspecialchars($customer['HO_TEN']) ?>" required>
+                                <input type="text" name="ho_ten" class="form-control" value="<?= htmlspecialchars($customer['ho_ten'] ?? '') ?>" required>
                             </div>
                             <div class="col-md-6 form-group mb-3">
                                 <label class="fw-bold">Email <span class="text-danger">*</span></label>
-                                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($customer['EMAIL']) ?>" required>
+                                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($customer['email_tk'] ?? '') ?>" required>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 form-group mb-3">
                                 <label class="fw-bold">Số điện thoại <span class="text-danger">*</span></label>
-                                <input type="text" name="sdt" class="form-control" value="<?= htmlspecialchars($customer['SDT_TK']) ?>" required>
+                                <input type="text" name="sdt" class="form-control" value="<?= htmlspecialchars($customer['sdt_tk'] ?? '') ?>" required>
                             </div>
                             <div class="col-md-6 form-group mb-3">
                                 <label class="fw-bold">Giới tính</label>
                                 <select name="gioi_tinh" class="form-select">
-                                    <option value="Nam" <?= $customer['GIOI_TINH'] == 'Nam' ? 'selected' : '' ?>>Nam</option>
-                                    <option value="Nữ" <?= $customer['GIOI_TINH'] == 'Nữ' ? 'selected' : '' ?>>Nữ</option>
-                                    <option value="Khác" <?= $customer['GIOI_TINH'] == 'Khác' ? 'selected' : '' ?>>Khác</option>
+                                    <option value="Nam" <?= ($customer['gioi_tinh'] ?? '') == 'Nam' ? 'selected' : '' ?>>Nam</option>
+                                    <option value="Nữ" <?= ($customer['gioi_tinh'] ?? '') == 'Nữ' ? 'selected' : '' ?>>Nữ</option>
+                                    <option value="Khác" <?= ($customer['gioi_tinh'] ?? '') == 'Khác' ? 'selected' : '' ?>>Khác</option>
                                 </select>
                             </div>
                         </div>
@@ -60,6 +60,7 @@
                     </div>
                 </form>
             </div>
+
             <div class="card card-outline card-info mt-4">
                 <div class="card-header">
                     <h3 class="card-title"><i class="bi bi-geo-alt"></i> Sổ địa chỉ nhận hàng</h3>
@@ -80,18 +81,18 @@
                                 <?php foreach ($addresses as $index => $addr): ?>
                                     <tr>
                                         <td><?= $index + 1 ?></td>
-                                        <td class="fw-bold"><?= htmlspecialchars($addr['TEN_NGUOI_NHAN']) ?></td>
-                                        <td><?= htmlspecialchars($addr['SDT_GH']) ?></td>
+                                        <td class="fw-bold"><?= htmlspecialchars($addr['ten_nguoi_nhan'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($addr['sdt_gh'] ?? '') ?></td>
                                         <td>
-                                            <?= htmlspecialchars($addr['DIA_CHI_CHI_TIET']) ?> <br>
+                                            <?= htmlspecialchars($addr['dia_chi_chi_tiet'] ?? '') ?> <br>
                                             <small class="text-muted">
-                                                <?= htmlspecialchars($addr['TEN_XA_PHUONG']) ?>, 
-                                                <?= htmlspecialchars($addr['TEN_QUAN_HUYEN']) ?>, 
-                                                <?= htmlspecialchars($addr['TEN_TINH_TP']) ?>
+                                                <?= htmlspecialchars($addr['ten_xa_phuong'] ?? '') ?>, 
+                                                <?= htmlspecialchars($addr['ten_quan_huyen'] ?? '') ?>, 
+                                                <?= htmlspecialchars($addr['ten_tinh_tp'] ?? '') ?>
                                             </small>
                                         </td>
                                         <td class="text-center">
-                                            <?php if ($addr['IS_DEFAULT'] == 1): ?>
+                                            <?php if (($addr['mac_dinh'] ?? 0) == 1): ?>
                                                 <span class="badge bg-success">Mặc định</span>
                                             <?php else: ?>
                                                 <span class="badge bg-secondary">Phụ</span>

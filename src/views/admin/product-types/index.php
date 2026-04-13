@@ -69,16 +69,16 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                                 <?php $i = 1; foreach ($productTypes as $row): ?>
                                     <tr>
                                         <td class="text-center"><?php echo $i++; ?></td>
-                                        <td><?php echo $row['ID_LHH']; ?></td>
-                                        <td><span class="badge bg-info"><?php echo htmlspecialchars($row['TEN_DM'] ?? 'N/A'); ?></span></td>
-                                        <td><?php echo htmlspecialchars($row['TEN_LHH']); ?></td>
+                                        <td><?php echo $row['id_loai2']; ?></td>
+                                        <td><span class="badge bg-info"><?php echo htmlspecialchars($row['ten_dm'] ?? 'N/A'); ?></span></td>
+                                        <td><?php echo htmlspecialchars($row['ten_loai'] ?? ''); ?></td>
                                         <td align="center">
                                             <div class="dropdown">
                                                 <button class="btn btn-flat btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">Hành động</button>
                                                 <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" href="<?php echo BASE_PATH; ?>/admin/product-types/edit/<?php echo $row['ID_LHH']; ?>"><i class="bi bi-pencil-square text-primary"></i> Sửa</a></li>
+                                                    <li><a class="dropdown-item" href="<?php echo BASE_PATH; ?>/admin/product-types/edit/<?php echo $row['id_loai2']; ?>"><i class="bi bi-pencil-square text-primary"></i> Sửa</a></li>
                                                     <li><hr class="dropdown-divider"></li>
-                                                    <li><a class="dropdown-item" href="<?php echo BASE_PATH; ?>/admin/product-types/delete/<?php echo $row['ID_LHH']; ?>" onclick="return confirm('Bạn chắc chắn muốn xóa?');"><i class="bi bi-trash text-danger"></i> Xóa</a></li>
+                                                    <li><a class="dropdown-item" href="<?php echo BASE_PATH; ?>/admin/product-types/delete/<?php echo $row['id_loai2']; ?>" onclick="return confirm('Bạn chắc chắn muốn xóa?');"><i class="bi bi-trash text-danger"></i> Xóa</a></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -94,7 +94,16 @@ require_once __DIR__ . '/../layouts/sidebar.php';
 </main>
 
 <script>
-    $(document).ready(function() { $('#table-product-types').DataTable(); });
+    $(document).ready(function() { 
+        if ( $.fn.DataTable.isDataTable('#table-product-types') ) {
+            $('#table-product-types').DataTable().destroy();
+        }
+        $('#table-product-types').DataTable({
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+            }
+        }); 
+    });
 </script>
 
 <?php

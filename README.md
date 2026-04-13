@@ -12,3 +12,6 @@ Bước 2: ## Setup project
 1. composer install
 2. cp .env.example .env
 3. config database
+--------------------------
+sandbox tích hợp zalo pay
+composer require guzzlehttp/guzzle

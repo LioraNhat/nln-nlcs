@@ -13,7 +13,6 @@ class OrderModel extends BaseModel {
     // =========================================
 
     public function getOrdersByUserId($userId, $keyword, $limit, $offset) {
-
         $sqlWhere = "WHERE dh.id_tk = :userId";
         $params = [':userId' => $userId];
 
@@ -28,25 +27,23 @@ class OrderModel extends BaseModel {
                 dh.ngay_gio_tao_don, 
                 dh.thanh_tien,
                 dh.trang_thai_thanh_toan,
-                dht.id_ttd,
+                cttt.id_ttd, -- Lấy từ bảng chi_tiet_trang_thai
                 dmt.ten_trang_thai
             FROM don_hang dh
             LEFT JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
-            LEFT JOIN danh_muc_trang_thai dmt ON dht.id_ttd = dmt.id_ttd
+            LEFT JOIN chi_tiet_trang_thai cttt ON dht.id_log = cttt.id_log -- JOIN trung gian
+            LEFT JOIN danh_muc_trang_thai dmt ON cttt.id_ttd = dmt.id_ttd
             $sqlWhere
             ORDER BY dh.ngay_gio_tao_don DESC
             LIMIT :limit OFFSET :offset
         ";
 
         $stmt = $this->db->prepare($sql);
-
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
-
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
-
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -146,57 +143,71 @@ class OrderModel extends BaseModel {
 
 
     public function createInitialOrderStatus($orderId) {
-
-        $sql = "INSERT INTO don_hang_hien_tai (id_dh, id_ttd, thoi_gian, ghi_chu) 
-                VALUES (?, 'TTD01', NOW(), 'Đơn hàng mới tạo')";
-
-        $stmt = $this->db->prepare($sql);
-
-        return $stmt->execute([$orderId]);
-    }
-
-
-    public function cancelUserOrder($orderId, $userId) {
-
         try {
-
             $this->db->beginTransaction();
 
-            $sql_check = "SELECT dh.id_dh 
-                          FROM don_hang dh
-                          JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
-                          WHERE dh.id_dh = ? AND dh.id_tk = ? AND dht.id_ttd = 'TTD01'
-                          FOR UPDATE";
+            // 1. Tạo bản ghi trong don_hang_hien_tai
+            $sqlLog = "INSERT INTO don_hang_hien_tai (id_dh, ghi_chu) VALUES (?, 'Đơn hàng mới tạo')";
+            $stmtLog = $this->db->prepare($sqlLog);
+            $stmtLog->execute([$orderId]);
+            
+            // Lấy id_log vừa tự động tăng (AUTO_INCREMENT)
+            $idLog = $this->db->lastInsertId();
 
-            $stmt_check = $this->db->prepare($sql_check);
-
-            $stmt_check->execute([$orderId, $userId]);
-
-            if (!$stmt_check->fetch()) {
-
-                $this->db->rollBack();
-
-                return false;
-            }
-
-            $sql_update = "UPDATE don_hang_hien_tai 
-                           SET id_ttd = 'TTD05', thoi_gian = NOW(), ghi_chu = 'Khách hủy đơn'
-                           WHERE id_dh = ?";
-
-            $this->db->prepare($sql_update)->execute([$orderId]);
+            // 2. Tạo bản ghi trong chi_tiet_trang_thai (nơi chứa id_ttd)
+            $sqlStatus = "INSERT INTO chi_tiet_trang_thai (id_ttd, id_log, CTTT_ThoiDiem) VALUES ('TTD01', ?, NOW())";
+            $stmtStatus = $this->db->prepare($sqlStatus);
+            $stmtStatus->execute([$idLog]);
 
             $this->db->commit();
-
             return true;
-
-        } catch (Exception $e) {
-
+        } catch (\Exception $e) {
             $this->db->rollBack();
-
             return false;
         }
     }
 
+
+    public function cancelUserOrder($orderId, $userId) {
+        try {
+            $this->db->beginTransaction();
+
+            // Kiểm tra đơn hàng có thuộc user và đang ở trạng thái 'Chờ xử lý' (TTD01) không
+            $sql_check = "SELECT dht.id_log 
+                        FROM don_hang dh
+                        JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
+                        JOIN chi_tiet_trang_thai cttt ON dht.id_log = cttt.id_log
+                        WHERE dh.id_dh = ? AND dh.id_tk = ? AND cttt.id_ttd = 'TTD01'
+                        FOR UPDATE";
+
+            $stmt_check = $this->db->prepare($sql_check);
+            $stmt_check->execute([$orderId, $userId]);
+            $row = $stmt_check->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            $idLog = $row['id_log'];
+
+            // Cập nhật mã trạng thái sang TTD05 (Đã hủy)
+            $sql_update_status = "UPDATE chi_tiet_trang_thai 
+                                SET id_ttd = 'TTD05', CTTT_ThoiDiem = NOW() 
+                                WHERE id_log = ?";
+            $this->db->prepare($sql_update_status)->execute([$idLog]);
+
+            // Cập nhật lại ghi chú bên bảng log
+            $sql_update_log = "UPDATE don_hang_hien_tai SET ghi_chu = 'Khách hủy đơn' WHERE id_log = ?";
+            $this->db->prepare($sql_update_log)->execute([$idLog]);
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
 
     // =========================================
     // DASHBOARD
@@ -211,26 +222,31 @@ class OrderModel extends BaseModel {
 
 
     public function getTotalRevenue() {
-
+        // Chúng ta cần JOIN qua chi_tiet_trang_thai để lấy được id_ttd
         $sql = "SELECT SUM(dh.thanh_tien) as total 
                 FROM don_hang dh
                 LEFT JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
-                WHERE dht.id_ttd != 'TTD05'";
+                LEFT JOIN chi_tiet_trang_thai cttt ON dht.id_log = cttt.id_log
+                WHERE cttt.id_ttd != 'TTD05'";
 
         $stmt = $this->db->query($sql);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result['total'] ?? 0;
     }
 
 
     public function getRecentOrders($limit = 5) {
-
         $sql = "SELECT dh.*, tk.ho_ten, dmt.ten_trang_thai
                 FROM don_hang dh
                 LEFT JOIN tai_khoan tk ON dh.id_tk = tk.id_tk
                 LEFT JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
-                LEFT JOIN danh_muc_trang_thai dmt ON dht.id_ttd = dmt.id_ttd
-                ORDER BY dh.ngay_gio_tao_don DESC LIMIT " . (int)$limit;
+                -- JOIN thêm bảng chi_tiet_trang_thai để lấy id_ttd
+                LEFT JOIN chi_tiet_trang_thai cttt ON dht.id_log = cttt.id_log
+                -- Sau đó mới JOIN đến bảng danh mục để lấy tên
+                LEFT JOIN danh_muc_trang_thai dmt ON cttt.id_ttd = dmt.id_ttd
+                ORDER BY dh.ngay_gio_tao_don DESC 
+                LIMIT " . (int)$limit;
 
         return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -280,43 +296,43 @@ class OrderModel extends BaseModel {
 
 
     public function getAllOrders($keyword = '', $statusFilter = '', $limit = 20, $offset = 0) {
-
         $sqlWhere = "WHERE 1=1";
-
         $params = [];
 
         if (!empty($keyword)) {
-
             $sqlWhere .= " AND (
                 dh.id_dh LIKE :keyword 
                 OR tk.ho_ten LIKE :keyword 
                 OR tk.sdt_tk LIKE :keyword
                 OR CAST(dh.thanh_tien AS CHAR) LIKE :keyword
             )";
-
             $params[':keyword'] = '%' . $keyword . '%';
         }
 
+        // VỊ TRÍ SỬA 1: Thay dht.id_ttd thành cttt.id_ttd
         if (!empty($statusFilter)) {
-
-            $sqlWhere .= " AND dht.id_ttd = :status";
-
+            $sqlWhere .= " AND cttt.id_ttd = :status";
             $params[':status'] = $statusFilter;
         }
 
+        // VỊ TRÍ SỬA 2: Cập nhật SELECT và các phép JOIN
         $sql = "SELECT 
                     dh.id_dh,
                     dh.ngay_gio_tao_don,
                     dh.thanh_tien,
                     dh.trang_thai_thanh_toan,
-                    dht.id_ttd,
+                    cttt.id_ttd,            -- Lấy từ bảng chi tiết
+                    cttt.CTTT_ThoiDiem,     -- Lấy thời điểm từ bảng mới
                     dmt.ten_trang_thai,
                     tk.ho_ten,
                     tk.sdt_tk,
                     tk.id_tk
                 FROM don_hang dh
+                -- Join qua bảng trung gian để lấy log hiện tại
                 LEFT JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
-                LEFT JOIN danh_muc_trang_thai dmt ON dht.id_ttd = dmt.id_ttd
+                LEFT JOIN chi_tiet_trang_thai cttt ON dht.id_log = cttt.id_log
+                -- Join để lấy tên trạng thái
+                LEFT JOIN danh_muc_trang_thai dmt ON cttt.id_ttd = dmt.id_ttd
                 LEFT JOIN tai_khoan tk ON dh.id_tk = tk.id_tk
                 $sqlWhere
                 ORDER BY dh.ngay_gio_tao_don DESC
@@ -325,16 +341,13 @@ class OrderModel extends BaseModel {
         $stmt = $this->db->prepare($sql);
 
         foreach ($params as $key => $value) {
-
             $stmt->bindValue($key, $value);
         }
 
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
 
         $stmt->execute();
-
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -344,12 +357,11 @@ class OrderModel extends BaseModel {
     // =========================================
 
     public function getOrderById($orderId) {
-
         $sql = "SELECT 
                     dh.*,
-                    dht.id_ttd,
+                    cttt.id_ttd,            -- Lấy từ chi_tiet_trang_thai
                     dmt.ten_trang_thai,
-                    dht.thoi_gian,
+                    cttt.CTTT_ThoiDiem as thoi_gian, -- Tên cột đúng trong SQL
                     tk.ho_ten,
                     tk.sdt_tk,
                     tk.email_tk,
@@ -362,22 +374,20 @@ class OrderModel extends BaseModel {
                     dc.ten_tinh_tp
                 FROM don_hang dh
                 LEFT JOIN don_hang_hien_tai dht ON dh.id_dh = dht.id_dh
-                LEFT JOIN danh_muc_trang_thai dmt ON dht.id_ttd = dmt.id_ttd
+                LEFT JOIN chi_tiet_trang_thai cttt ON dht.id_log = cttt.id_log -- JOIN trung gian
+                LEFT JOIN danh_muc_trang_thai dmt ON cttt.id_ttd = dmt.id_ttd
                 LEFT JOIN tai_khoan tk ON dh.id_tk = tk.id_tk
                 LEFT JOIN phuong_thuc_thanh_toan pttt ON dh.id_pttt = pttt.id_pttt
                 LEFT JOIN dia_chi_giao_hang dc ON dh.id_dc = dc.id_dc
                 WHERE dh.id_dh = ?";
 
         $stmt = $this->db->prepare($sql);
-
         $stmt->execute([$orderId]);
-
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
 
     public function getOrderItems($orderId) {
-
         $sql = "SELECT 
                     ctdh.id_hh,
                     ctdh.so_luong_ban_ra,
@@ -390,66 +400,57 @@ class OrderModel extends BaseModel {
                 LEFT JOIN hang_hoa hh ON ctdh.id_hh = hh.id_hh
                 LEFT JOIN dvt d ON hh.id_dvt = d.id_dvt
                 LEFT JOIN lo_hang l ON ctdh.id_lo = l.id_lo
+                -- JOIN lấy giá dựa trên lô hàng và thời điểm hiện tại
                 LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
-                    AND g.id_td IN (
-                        SELECT id_td FROM thoi_diem
-                        WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban
-                    )
-                WHERE ctdh.id_dh = ?";
+                LEFT JOIN thoi_diem td ON g.id_td = td.id_td
+                WHERE ctdh.id_dh = ? 
+                AND (NOW() BETWEEN td.ngay_bd_gia_ban AND td.ngay_kt_gia_ban OR td.id_td IS NULL)";
 
         $stmt = $this->db->prepare($sql);
-
         $stmt->execute([$orderId]);
-
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+}
 
 
     public function updateOrderStatus($id, $status) {
-
         try {
-
             $this->db->beginTransaction();
 
-            $check = $this->db->prepare("SELECT id_dh FROM don_hang_hien_tai WHERE id_dh = ?");
-
+            // 1. Kiểm tra xem đơn hàng đã có log trong don_hang_hien_tai chưa
+            $check = $this->db->prepare("SELECT id_log FROM don_hang_hien_tai WHERE id_dh = ?");
             $check->execute([$id]);
+            $log = $check->fetch(PDO::FETCH_ASSOC);
 
-            if ($check->rowCount() > 0) {
-
-                $sql = "UPDATE don_hang_hien_tai 
-                        SET id_ttd = ?, thoi_gian = NOW() 
-                        WHERE id_dh = ?";
-
-                $this->db->prepare($sql)->execute([$status, $id]);
-
+            if ($log) {
+                $id_log = $log['id_log'];
+                // Cập nhật trạng thái mới vào chi_tiet_trang_thai
+                $sql = "UPDATE chi_tiet_trang_thai 
+                        SET id_ttd = ?, CTTT_ThoiDiem = NOW() 
+                        WHERE id_log = ?";
+                $this->db->prepare($sql)->execute([$status, $id_log]);
             } else {
-
-                $sql = "INSERT INTO don_hang_hien_tai 
-                        (id_dh, id_ttd, thoi_gian) 
-                        VALUES (?, ?, NOW())";
-
-                $this->db->prepare($sql)->execute([$id, $status]);
+                // Nếu chưa có (trường hợp hy hữu), tạo mới cả 2 bảng
+                $this->db->prepare("INSERT INTO don_hang_hien_tai (id_dh) VALUES (?)")->execute([$id]);
+                $id_log = $this->db->lastInsertId();
+                
+                $this->db->prepare("INSERT INTO chi_tiet_trang_thai (id_ttd, id_log, CTTT_ThoiDiem) VALUES (?, ?, NOW())")
+                        ->execute([$status, $id_log]);
             }
 
+            // 2. Nếu trạng thái là 'Giao thành công' (TTD04), cập nhật bảng don_hang
             if ($status === 'TTD04') {
-
                 $sql = "UPDATE don_hang 
                         SET trang_thai_thanh_toan = 1,
                             ngay_thanh_toan = NOW()
                         WHERE id_dh = ?";
-
                 $this->db->prepare($sql)->execute([$id]);
             }
 
             $this->db->commit();
-
             return true;
-
         } catch (\Exception $e) {
-
             $this->db->rollBack();
-
+            error_log("Lỗi cập nhật trạng thái: " . $e->getMessage());
             return false;
         }
     }
