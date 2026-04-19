@@ -216,4 +216,56 @@ class InventoryModel extends BaseModel {
             return false;
         }
     }
+
+    /**
+     * Tự động tính và cập nhật giá bán dựa trên Giá vốn bình quân và % Lợi nhuận
+     */
+    public function updatePriceForProduct($id_hh) {
+        try {
+            $this->db->beginTransaction(); // Bắt đầu giao dịch an toàn
+
+            // 1. Lấy % lợi nhuận (Mặc định 30% nếu không thiết lập)
+            $stmt = $this->db->prepare("SELECT phan_tram_loi_nhuan FROM hang_hoa WHERE id_hh = ?");
+            $stmt->execute([$id_hh]);
+            $margin = $stmt->fetchColumn();
+            $margin = ($margin !== false) ? (float)$margin : 30.0;
+
+            // 2. Tính giá vốn bình quân (WAC)
+            $stmt = $this->db->prepare("
+                SELECT SUM(so_luong_con_lai * gia_von_nhap) / SUM(so_luong_con_lai) as avg_cost 
+                FROM lo_hang 
+                WHERE id_hh = ? AND so_luong_con_lai > 0
+            ");
+            $stmt->execute([$id_hh]);
+            $avg_cost = (float)$stmt->fetchColumn();
+
+            if ($avg_cost > 0) {
+                $new_price = $avg_cost * (1 + ($margin / 100));
+
+                // 3. Lấy thời điểm hiệu lực mới nhất từ bảng 'thoi_diem'
+                // Thay vì hardcode 'TD005', ta lấy bản ghi mới nhất theo ngày bắt đầu
+                $stmt_td = $this->db->query("SELECT id_td FROM thoi_diem ORDER BY ngay_bd_gia_ban DESC LIMIT 1");
+                $current_td = $stmt_td->fetchColumn();
+
+                if ($current_td) {
+                    // 4. Cập nhật giá bán cho tất cả các lô còn tồn của sản phẩm
+                    $sql = "INSERT INTO gia_ban_hien_tai (id_lo, id_td, gia_hien_tai) 
+                            SELECT id_lo, ?, ? 
+                            FROM lo_hang 
+                            WHERE id_hh = ? AND so_luong_con_lai > 0
+                            ON DUPLICATE KEY UPDATE gia_hien_tai = VALUES(gia_hien_tai)";
+                    
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute([$current_td, $new_price, $id_hh]);
+                }
+            }
+            
+            $this->db->commit(); // Lưu thay đổi
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollBack(); // Hủy thay đổi nếu có lỗi
+            error_log("Error in updatePriceForProduct: " . $e->getMessage());
+            return false;
+        }
+    }
 }

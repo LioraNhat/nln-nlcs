@@ -45,7 +45,6 @@
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
-            <!-- ✅ SỬA: dùng $product thay vì $products[0] -->
             <?php if (!empty($product)): ?>
             <div class="card card-outline card-info shadow-sm mb-4">
                 <div class="card-body">
@@ -53,11 +52,11 @@
                         <div class="col-md-auto">
                             <?php if (!empty($product['link_anh'])): ?>
                             <img src="<?= BASE_PATH ?>/uploads/<?= htmlspecialchars($product['link_anh']) ?>"
-                                 class="rounded border shadow-sm"
-                                 style="width:80px;height:80px;object-fit:cover;">
+                                  class="rounded border shadow-sm"
+                                  style="width:80px;height:80px;object-fit:cover;">
                             <?php else: ?>
                             <div class="rounded border bg-light d-flex align-items-center justify-content-center"
-                                 style="width:80px;height:80px;">
+                                  style="width:80px;height:80px;">
                                 <i class="bi bi-box fs-2 text-muted"></i>
                             </div>
                             <?php endif; ?>
@@ -84,7 +83,6 @@
             </div>
             <?php endif; ?>
 
-            <!-- ✅ SỬA: dùng $lots thay vì $products -->
             <div class="card card-outline card-primary shadow">
                 <div class="card-header">
                     <h3 class="card-title">Lịch sử nhập & Trạng thái các lô</h3>
@@ -100,12 +98,12 @@
                                     <th class="text-center">Mã Lô</th>
                                     <th>Ngày nhập</th>
                                     <th>Nhà cung cấp</th>
-                                    <th>Hạn sử dụng</th>
+                                    <th>HSD</th>
                                     <th class="text-center">SL nhập</th>
                                     <th class="text-center">Tồn</th>
                                     <th class="text-center">Trạng thái</th>
-                                    <th class="text-end">Giá vốn nhập</th>
-                                    <th class="text-end">Giá bán</th>
+                                    <th class="text-end">Giá vốn</th>
+                                    <th class="text-end text-danger">Giá sau KM</th>
                                     <th>Khuyến mãi</th>
                                     <th class="text-center">Thao tác</th>
                                 </tr>
@@ -125,8 +123,10 @@
                                     $daysLeft = ceil(($hsd_ts - time()) / 86400);
                                     $hsdCls   = ($daysLeft <= 7) ? 'text-danger fw-bold' : (($daysLeft <= 30) ? 'text-warning' : '');
 
-                                    $gia       = isset($row['gia_hien_tai']) ? (float)$row['gia_hien_tai'] : null;
-                                    $giaZero   = ($gia !== null && $gia === 0.0);
+                                    $gia      = isset($row['gia_hien_tai']) ? (float)$row['gia_hien_tai'] : null;
+                                    $phanTram = (float)($row['phan_tram_km'] ?? 0);
+                                    // Giá sau KM = Giá hiện tại * (1 - %KM/100)
+                                    $giaSauKm = ($gia !== null) ? $gia * (1 - ($phanTram / 100)) : null;
 
                                     $badgeMap  = [
                                         'TTL01' => 'bg-success',
@@ -143,26 +143,12 @@
                                                 <?= $row['id_lo'] ?>
                                             </span>
                                         </td>
-                                        <td>
-                                            <?= $row['ngay_lap_phieu_nhap']
-                                                ? date('d/m/Y', strtotime($row['ngay_lap_phieu_nhap']))
-                                                : '<span class="text-muted">—</span>' ?>
-                                        </td>
-                                        <td>
-                                            <?= htmlspecialchars($row['ten_ncc'] ?? '—') ?>
-                                        </td>
+                                        <td><?= $row['ngay_lap_phieu_nhap'] ? date('d/m/Y', strtotime($row['ngay_lap_phieu_nhap'])) : '<span class="text-muted">—</span>' ?></td>
+                                        <td><?= htmlspecialchars($row['ten_ncc'] ?? '—') ?></td>
                                         <td>
                                             <div class="<?= $hsdCls ?>">
-                                                <i class="bi bi-calendar3"></i>
-                                                <?= date('d/m/Y', $hsd_ts) ?>
-                                                <br>
-                                                <small>
-                                                    <?php if ($daysLeft < 0): ?>
-                                                        <span class="text-danger">(Đã hết hạn)</span>
-                                                    <?php else: ?>
-                                                        (Còn <?= $daysLeft ?> ngày)
-                                                    <?php endif; ?>
-                                                </small>
+                                                <i class="bi bi-calendar3"></i> <?= date('d/m/Y', $hsd_ts) ?>
+                                                <br><small><?php if ($daysLeft < 0): ?><span class="text-danger">(Đã hết hạn)</span><?php else: ?>(Còn <?= $daysLeft ?> ngày)<?php endif; ?></small>
                                             </div>
                                         </td>
                                         <td class="text-center"><?= number_format($row['so_luong_nhap'] ?? 0) ?></td>
@@ -174,26 +160,16 @@
                                         <td class="text-center">
                                             <span class="badge <?= $badgeCls ?>"><?= $row['ten_trang_thai_lo'] ?></span>
                                         </td>
-                                        <td class="text-end fw-bold">
-                                            <?= number_format($row['gia_von_nhap'] ?? 0) ?>đ
+                                        <td class="text-end fw-bold"><?= number_format($row['gia_von_nhap'] ?? 0) ?>đ</td>
+
+                                        <td class="text-end fw-bold text-danger">
+                                            <?= ($giaSauKm !== null) ? number_format($giaSauKm, 0, ',', '.') . 'đ' : '—' ?>
                                         </td>
-                                        <!-- ✅ Cột giá bán: cảnh báo nếu = 0 -->
-                                        <td class="text-end fw-bold">
-                                            <?php if ($giaZero): ?>
-                                                <span class="badge bg-danger">
-                                                    <i class="bi bi-exclamation-triangle-fill"></i> 0đ - Cần cập nhật
-                                                </span>
-                                            <?php elseif ($gia === null): ?>
-                                                <span class="text-muted fst-italic">Chưa có giá</span>
-                                            <?php else: ?>
-                                                <span class="text-success"><?= number_format($gia) ?>đ</span>
-                                            <?php endif; ?>
-                                        </td>
+
                                         <td>
                                             <?php if (!empty($row['ten_km'])): ?>
                                                 <span class="badge bg-warning text-dark">
-                                                    <?= htmlspecialchars($row['ten_km']) ?>
-                                                    (-<?= $row['phan_tram_km'] ?>%)
+                                                    <?= htmlspecialchars($row['ten_km']) ?> (-<?= $row['phan_tram_km'] ?>%)
                                                 </span>
                                             <?php else: ?>
                                                 <span class="text-muted">—</span>
@@ -216,12 +192,10 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </main>
 
-<!-- ====== MODAL SỬA LÔ ====== -->
 <div class="modal fade" id="modalEditBatch" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <form action="<?= BASE_PATH ?>/admin/inventories/update-batch" method="POST">
@@ -232,9 +206,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="id_lo" id="input-id-lo">
-                    <!-- ✅ Truyền id_hh để redirect về đúng trang sau khi update -->
                     <input type="hidden" name="id_hh" value="<?= $product['id_hh'] ?? '' ?>">
-
                     <div class="mb-3">
                         <label class="form-label fw-bold">Hạn sử dụng</label>
                         <input type="datetime-local" name="hsd_lo" id="input-hsd" class="form-control" required>
@@ -268,7 +240,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const editModal = new bootstrap.Modal(document.getElementById('modalEditBatch'));
-
     document.querySelectorAll('.btn-edit-batch').forEach(btn => {
         btn.addEventListener('click', function () {
             document.getElementById('display-id-lo').innerText = this.dataset.idLo;

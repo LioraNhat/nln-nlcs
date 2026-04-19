@@ -244,12 +244,11 @@ class ProductModel extends BaseModel {
      * Lấy tất cả các lô hàng còn tồn của 1 sản phẩm (Dùng cho AJAX Modal)
      */
     public function getBatchesByProductId($productId) {
-        // Sửa ten_trang_thai -> ten_trang_thai_lo
-        // Sửa ngay_nhap -> ngay_lap_phieu_nhap
         $sql = "SELECT 
                     lh.*,
                     ttl.ten_trang_thai_lo, 
-                    pn.ngay_lap_phieu_nhap
+                    pn.ngay_lap_phieu_nhap,
+                    km.ten_km
                 FROM lo_hang lh
                 LEFT JOIN trang_thai_lo_hang ttl 
                     ON lh.id_trang_thai_lo = ttl.id_trang_thai_lo
@@ -257,6 +256,8 @@ class ProductModel extends BaseModel {
                     ON lh.id_lo = ct.id_lo
                 LEFT JOIN phieu_nhap pn 
                     ON ct.id_pn = pn.id_pn
+                LEFT JOIN khuyen_mai km 
+                    ON lh.id_km = km.id_km
                 WHERE lh.id_hh = :id_hh 
                     AND lh.so_luong_con_lai > 0
                 ORDER BY lh.hsd_lo ASC";

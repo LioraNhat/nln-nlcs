@@ -768,7 +768,10 @@ class AdminController extends BaseController {
         $result = $this->inventoryModel->createLot($id_hh, $data);
 
         if ($result) {
-            $_SESSION['success'] = "Nhập lô hàng mới thành công! Giá bán đã được tự động tính toán.";
+            // TỰ ĐỘNG CẬP NHẬT GIÁ BÁN TỪ GIÁ VỐN BÌNH QUÂN
+            $this->inventoryModel->updatePriceForProduct($id_hh);
+            
+            $_SESSION['success'] = "Nhập lô hàng mới thành công! Giá bán đã được cập nhật theo giá vốn mới.";
         } else {
             $_SESSION['error'] = "Lỗi khi nhập lô hàng! Vui lòng kiểm tra lại dữ liệu.";
         }
@@ -790,6 +793,9 @@ class AdminController extends BaseController {
 
     // JSON cho modal
     public function getBatchesJson() {
+        if (ob_get_length()) ob_clean();
+        error_reporting(0);
+        
         $id_hh   = $_GET['id_hh'] ?? '';
         $batches = $this->inventoryModel->getBatchesByProductId($id_hh);
 
@@ -804,13 +810,18 @@ class AdminController extends BaseController {
         foreach ($batches as &$b) {
             $b['badge_class'] = $badgeMap[$b['id_trang_thai_lo']] ?? 'bg-light';
             $b['hsd_f']       = date('d/m/Y', strtotime($b['hsd_lo']));
-            $b['nhap_f']      = $b['ngay_lap_phieu_nhap']
+            $b['nhap_f']      = !empty($b['ngay_lap_phieu_nhap'])
                                 ? date('d/m/Y', strtotime($b['ngay_lap_phieu_nhap']))
                                 : '—';
+            
+            // Dữ liệu bổ sung
+            $b['ten_tt_f']    = $b['ten_trang_thai_lo'] ?? 'N/A';
+            $b['ten_km_f']    = $b['ten_km'] ?? 'Không';
+            
             $b['gia_canh_bao'] = (isset($b['gia_hien_tai']) && (float)$b['gia_hien_tai'] === 0.0);
         }
 
-        header('Content-Type: application/json');
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode($batches);
         exit;
     }

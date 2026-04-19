@@ -12,67 +12,130 @@ class SearchModel extends BaseModel {
         'bán', 'xem', 'thử', 'loại', 'sản', 'phẩm', 'ở', 'là',
     ];
 
-    /**
-     * Lấy toàn bộ tên sản phẩm từ DB, tách thành danh sách cụm từ quan trọng
-     * Đây là "từ điển" được train từ dữ liệu thực tế
-     */
-    private function buildDictionary(): array {
-        $stmt = $this->db->query("SELECT ten_hh FROM hang_hoa WHERE duoc_phep_ban = 1");
-        $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    // =====================================================
+    // 1. CHUẨN HÓA TIẾNG VIỆT KHÔNG DẤU
+    // =====================================================
+    private function removeAccents(string $str): string {
+        $str = mb_strtolower(trim($str), 'UTF-8');
+        $accents = [
+            'à','á','ả','ã','ạ','ă','ắ','ằ','ẳ','ẵ','ặ','â','ấ','ầ','ẩ','ẫ','ậ',
+            'è','é','ẻ','ẽ','ẹ','ê','ế','ề','ể','ễ','ệ',
+            'ì','í','ỉ','ĩ','ị',
+            'ò','ó','ỏ','õ','ọ','ô','ố','ồ','ổ','ỗ','ộ','ơ','ớ','ờ','ở','ỡ','ợ',
+            'ù','ú','ủ','ũ','ụ','ư','ứ','ừ','ử','ữ','ự',
+            'ỳ','ý','ỷ','ỹ','ỵ','đ',
+        ];
+        $noAccents = [
+            'a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','a',
+            'e','e','e','e','e','e','e','e','e','e','e',
+            'i','i','i','i','i',
+            'o','o','o','o','o','o','o','o','o','o','o','o','o','o','o','o','o',
+            'u','u','u','u','u','u','u','u','u','u','u',
+            'y','y','y','y','y','d',
+        ];
+        return str_replace($accents, $noAccents, $str);
+    }
 
+    // =====================================================
+    // BƯỚC 1: LỌC STOP WORDS TRƯỚC — trả về câu sạch
+    // =====================================================
+    private function cleanInput(string $input): string {
+        $input = mb_strtolower(trim($input), 'UTF-8');
+        $words = preg_split('/\s+/', $input);
+        $filtered = array_filter(
+            $words,
+            fn($w) => !in_array($w, $this->stopWords) && mb_strlen($w, 'UTF-8') > 1
+        );
+        return implode(' ', $filtered);
+    }
+
+    // =====================================================
+    // 2. XÂY DỰNG TỪ ĐIỂN TỪ DỮ LIỆU DB
+    // =====================================================
+    private function buildDictionary(): array {
         $dictionary = [];
 
-        foreach ($rows as $name) {
-            $name = mb_strtolower(trim($name), 'UTF-8');
+        $stmt = $this->db->query("SELECT ten_hh FROM hang_hoa WHERE duoc_phep_ban = 1");
+        $productNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-            // Lấy cụm từ trước dấu ngoặc — VD: "cá basa kho tiêu (khay 300g)" → "cá basa kho tiêu"
-            if (preg_match('/^([^\(]+)/', $name, $matches)) {
+        $stmt = $this->db->query("SELECT ten_dm FROM danh_muc");
+        $catNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $stmt = $this->db->query("SELECT ten_loai FROM loai_hang_hoa");
+        $typeNames = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $allNames = array_merge($productNames, $catNames, $typeNames);
+
+        foreach ($allNames as $name) {
+            $name = mb_strtolower(trim($name), 'UTF-8');
+            if (!$name) continue;
+
+            // Cụm trước ngoặc/gạch ngang
+            if (preg_match('/^([^\(\-]+)/', $name, $matches)) {
                 $clean = trim($matches[1]);
-                if ($clean) $dictionary[] = $clean;
+                if ($clean) {
+                    $dictionary[] = $clean;
+                    $dictionary[] = $this->removeAccents($clean);
+                }
             }
 
-            // Tách từng từ đơn có độ dài >= 2 ký tự
+            // Từ đơn >= 2 ký tự
             $words = preg_split('/[\s\/\-\(\)]+/', $name);
             foreach ($words as $word) {
                 $word = trim($word);
                 if (mb_strlen($word, 'UTF-8') >= 2 && !in_array($word, $this->stopWords)) {
                     $dictionary[] = $word;
+                    $dictionary[] = $this->removeAccents($word);
                 }
             }
 
-            // Tách cụm 2 từ liền nhau — VD: "cá basa", "basa kho", "kho tiêu"
+            // Bigram
             $wordList = preg_split('/\s+/', $name);
             for ($i = 0; $i < count($wordList) - 1; $i++) {
-                $bigram = $wordList[$i] . ' ' . $wordList[$i + 1];
                 if (!in_array($wordList[$i], $this->stopWords)) {
+                    $bigram = $wordList[$i] . ' ' . $wordList[$i + 1];
                     $dictionary[] = $bigram;
+                    $dictionary[] = $this->removeAccents($bigram);
+                }
+            }
+
+            // Trigram
+            for ($i = 0; $i < count($wordList) - 2; $i++) {
+                if (!in_array($wordList[$i], $this->stopWords)) {
+                    $trigram = $wordList[$i] . ' ' . $wordList[$i + 1] . ' ' . $wordList[$i + 2];
+                    $dictionary[] = $trigram;
+                    $dictionary[] = $this->removeAccents($trigram);
                 }
             }
         }
 
-        // Loại trùng, sắp xếp dài trước để ưu tiên cụm dài match trước
         $dictionary = array_unique($dictionary);
         usort($dictionary, fn($a, $b) => mb_strlen($b, 'UTF-8') - mb_strlen($a, 'UTF-8'));
 
         return $dictionary;
     }
 
-    /**
-     * So khớp câu nói user với từ điển DB
-     * Trả về cụm từ khóa tốt nhất tìm được
-     */
-    private function extractFromDictionary(string $input): string {
-        $input = mb_strtolower(trim($input), 'UTF-8');
-        $dictionary = $this->buildDictionary();
+    // =====================================================
+    // 3. TRÍCH XUẤT TỪ KHÓA — nhận input đã sạch
+    // BƯỚC 2: Giới hạn terms, chỉ giữ cụm liên quan nhất
+    // =====================================================
+    private function extractFromDictionary(string $cleanedInput): array {
+        $inputNoAccent = $this->removeAccents($cleanedInput);
+        $dictionary    = $this->buildDictionary();
 
         $matched = [];
 
         foreach ($dictionary as $term) {
-            if (mb_strpos($input, $term, 0, 'UTF-8') !== false) {
-                // Tránh match trùng — nếu đã có cụm dài hơn chứa term này thì bỏ qua
+            $termNoAccent = $this->removeAccents($term);
+
+            $hitOriginal = mb_strpos($cleanedInput, $term, 0, 'UTF-8') !== false;
+            $hitNoAccent = mb_strpos($inputNoAccent, $termNoAccent, 0, 'UTF-8') !== false;
+
+            if ($hitOriginal || $hitNoAccent) {
                 $alreadyCovered = false;
                 foreach ($matched as $existing) {
-                    if (mb_strpos($existing, $term, 0, 'UTF-8') !== false) {
+                    if (mb_strpos($existing, $term, 0, 'UTF-8') !== false ||
+                        mb_strpos($this->removeAccents($existing), $termNoAccent, 0, 'UTF-8') !== false) {
                         $alreadyCovered = true;
                         break;
                     }
@@ -83,25 +146,47 @@ class SearchModel extends BaseModel {
             }
         }
 
-        // Nếu tìm được từ điển thì dùng, không thì fallback lọc stop words
-        if (!empty($matched)) {
-            return implode(' ', $matched);
+        // Fallback: dùng từng từ trong input đã sạch
+        if (empty($matched)) {
+            $words   = preg_split('/\s+/', $cleanedInput);
+            $matched = array_values(array_filter(
+                $words,
+                fn($w) => mb_strlen($w, 'UTF-8') > 1
+            ));
         }
 
-        // Fallback: lọc stop words từ câu gốc
-        $words = preg_split('/\s+/', $input);
-        $filtered = array_filter($words, fn($w) =>
-            !in_array($w, $this->stopWords) && mb_strlen($w, 'UTF-8') > 1
-        );
-        return implode(' ', $filtered);
+        // BƯỚC 2: Chỉ giữ tối đa 5 cụm dài nhất, bỏ cụm 1 từ nếu đã có cụm dài hơn chứa nó
+        usort($matched, fn($a, $b) => mb_strlen($b, 'UTF-8') - mb_strlen($a, 'UTF-8'));
+
+        $filtered = [];
+        foreach ($matched as $term) {
+            $covered = false;
+            foreach ($filtered as $kept) {
+                if (mb_strpos($this->removeAccents($kept), $this->removeAccents($term), 0, 'UTF-8') !== false) {
+                    $covered = true;
+                    break;
+                }
+            }
+            if (!$covered) {
+                $filtered[] = $term;
+            }
+            if (count($filtered) >= 5) break;
+        }
+
+        return $filtered;
     }
 
+    // =====================================================
+    // 4. HÀM CHÍNH: TÌM KIẾM SẢN PHẨM
+    // =====================================================
     public function searchProducts(string $keyword, array $filters = []): array {
-        $keyword = $this->extractFromDictionary($keyword);
 
-        if ($keyword === '') return [];
+        // BƯỚC 1: Lọc stop words trước khi xử lý
+        $cleanedInput = $this->cleanInput($keyword);
 
-        // Lọc giá
+        if ($cleanedInput === '') return [];
+
+        // --- Lọc giá ---
         $priceCondition = '';
         switch ($filters['price'] ?? '') {
             case 'under_100k':    $priceCondition = 'AND g.gia_hien_tai < 100000'; break;
@@ -111,15 +196,16 @@ class SearchModel extends BaseModel {
             case 'over_400k':     $priceCondition = 'AND g.gia_hien_tai > 400000'; break;
         }
 
-        // Sắp xếp — chỉ áp dụng khi user chọn, còn mặc định để score quyết định
-        $userSort = $filters['sort'] ?? 'name_asc';
+        // --- Sắp xếp ---
+        $userSort   = $filters['sort'] ?? 'name_asc';
         $sortClause = match($userSort) {
             'name_desc'  => 'ORDER BY h.ten_hh DESC',
             'price_asc'  => 'ORDER BY g.gia_hien_tai ASC',
             'price_desc' => 'ORDER BY g.gia_hien_tai DESC',
-            default      => 'ORDER BY score DESC, h.ten_hh ASC', // mặc định: liên quan nhất lên đầu
+            default      => 'ORDER BY score DESC, h.ten_hh ASC',
         };
 
+        // --- Base JOIN dùng chung ---
         $baseJoin = "
             FROM hang_hoa h
             LEFT JOIN lo_hang l 
@@ -135,34 +221,50 @@ class SearchModel extends BaseModel {
             $priceCondition
         ";
 
-        // Tách từng từ để tính score
-        $words = array_filter(
-            preg_split('/\s+/', $keyword),
-            fn($w) => mb_strlen($w, 'UTF-8') >= 2
-        );
+        // BƯỚC 2: Trích xuất terms từ input đã sạch
+        $terms = $this->extractFromDictionary($cleanedInput);
 
-        // Xây score expression: mỗi từ khớp trong ten_hh = 2 điểm, trong mo_ta_hh = 1 điểm
-        // Khớp cụm đầy đủ trong ten_hh = 5 điểm (thưởng)
-        $scoreParts = [];
-        $params = [];
+        if (empty($terms)) return [];
 
-        foreach ($words as $i => $word) {
-            $scoreParts[] = "(CASE WHEN h.ten_hh LIKE :sw{$i} THEN 2 ELSE 0 END)";
-            $scoreParts[] = "(CASE WHEN h.mo_ta_hh LIKE :sw{$i} THEN 1 ELSE 0 END)";
-            $params[":sw{$i}"] = '%' . $word . '%';
+        // Chọn fullKeyword thông minh
+        $inputWords = preg_split('/\s+/', $this->removeAccents($cleanedInput));
+        $bestTerm   = $terms[0];
+        $bestScore  = 0;
+
+        foreach ($terms as $term) {
+            $termWords  = preg_split('/\s+/', $this->removeAccents($term));
+            $matchCount = count(array_intersect($inputWords, $termWords));
+            if ($matchCount > $bestScore) {
+                $bestScore = $matchCount;
+                $bestTerm  = $term;
+            }
         }
 
-        // Thưởng thêm nếu khớp nguyên cụm từ khóa
-        $scoreParts[] = "(CASE WHEN h.ten_hh LIKE :fullkw THEN 5 ELSE 0 END)";
-        $params[':fullkw'] = '%' . $keyword . '%';
+        $fullKeyword = $bestTerm;
+        $scoreParts  = [];
+        $likeParts   = [];
+        $params      = [];
 
-        $scoreExpr = implode(' + ', $scoreParts);
+        foreach ($terms as $i => $term) {
+            $wordCount   = count(preg_split('/\s+/', $term));
+            $scoreInName = $wordCount >= 2 ? 4 : 2;
+            $scoreInDesc = $wordCount >= 2 ? 2 : 1;
 
-        // Điều kiện LIKE: có ít nhất 1 từ khớp
-        $likeParts = [];
-        foreach ($words as $i => $word) {
-            $likeParts[] = "h.ten_hh LIKE :sw{$i} OR h.mo_ta_hh LIKE :sw{$i}";
+            $scoreParts[] = "(CASE WHEN h.ten_hh LIKE :sw{$i} THEN {$scoreInName} ELSE 0 END)";
+            $scoreParts[] = "(CASE WHEN h.mo_ta_hh LIKE :sw{$i} THEN {$scoreInDesc} ELSE 0 END)";
+            $likeParts[]  = "h.ten_hh LIKE :sw{$i} OR h.mo_ta_hh LIKE :sw{$i}";
+            $params[":sw{$i}"] = '%' . $term . '%';
         }
+
+        // Thưởng 5 điểm khớp cụm ở bất kỳ vị trí
+        $scoreParts[]      = "(CASE WHEN h.ten_hh LIKE :fullkw THEN 5 ELSE 0 END)";
+        $params[':fullkw'] = '%' . $fullKeyword . '%';
+
+        // Thưởng 10 điểm nếu tên BẮT ĐẦU bằng từ khóa
+        $scoreParts[]       = "(CASE WHEN h.ten_hh LIKE :startkw THEN 10 ELSE 0 END)";
+        $params[':startkw'] = $fullKeyword . '%';
+
+        $scoreExpr     = implode(' + ', $scoreParts);
         $likeCondition = implode(' OR ', $likeParts);
 
         $sql = "
@@ -181,9 +283,13 @@ class SearchModel extends BaseModel {
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Nếu vẫn không có → thử FULLTEXT
+        // BƯỚC 3: Lọc kết quả có điểm quá thấp — phải đạt tối thiểu 3 điểm
+        $rows = array_values(array_filter($rows, fn($row) => $row['score'] >= 3));
+
+        // Fallback FULLTEXT nếu không có kết quả
         if (empty($rows)) {
-            $sql = "
+            $ftkw = implode(' ', $terms);
+            $sql  = "
                 SELECT 
                     h.id_hh, h.ten_hh, h.mo_ta_hh, h.link_anh,
                     g.gia_hien_tai, l.so_luong_con_lai,
@@ -195,7 +301,7 @@ class SearchModel extends BaseModel {
                 LIMIT 40
             ";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([':kw' => $keyword . '*']);
+            $stmt->execute([':kw' => $ftkw . '*']);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 

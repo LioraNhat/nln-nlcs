@@ -62,7 +62,8 @@ require_once __DIR__ . '/../layouts/sidebar.php';
 
                                 <td class="text-center">
                                     <a href="javascript:void(0);" 
-                                       class="fw-bold text-decoration-none view-batch-details" 
+                                       class="fw-bold text-decoration-none view-batch-details d-block" 
+                                       style="cursor: pointer;"
                                        data-id="<?php echo $row['id_hh']; ?>"
                                        data-name="<?php echo htmlspecialchars($row['ten_hh']); ?>">
                                         <?php echo $row['tong_ton'] ?? 0; ?>
@@ -104,14 +105,13 @@ require_once __DIR__ . '/../layouts/sidebar.php';
                     <thead class="table-light">
                         <tr>
                             <th>Mã Lô</th>
-                            <th>Ngày nhập</th>
-                            <th>Hạn sử dụng</th>
+                            <th>Ngày nhập</th> <th>Hạn sử dụng</th>
                             <th>Số lượng tồn</th>
                             <th>Trạng thái</th>
-                        </tr>
+                            <th>Khuyến mãi</th> </tr>
                     </thead>
                     <tbody id="batchTableBody">
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -120,59 +120,43 @@ require_once __DIR__ . '/../layouts/sidebar.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const viewLinks = document.querySelectorAll('.view-batch-details');
-
-    viewLinks.forEach(link => {
-        link.addEventListener('click', function() {
-            const idHh = this.getAttribute('data-id');
-            const productName = this.getAttribute('data-name');
-
+    document.addEventListener('click', function(e) {
+        const target = e.target.closest('.view-batch-details');
+        if (target) {
+            const idHh = target.getAttribute('data-id');
+            const productName = target.getAttribute('data-name');
             document.getElementById('modalProductName').innerText = productName;
 
-            fetch(`<?= BASE_PATH ?>/admin/products/get-batches?id_hh=${idHh}`)
-                .then(response => {
-                    if (!response.ok) throw new Error("HTTP error " + response.status);
-                    return response.json();
-                })
+            fetch(`<?= BASE_PATH ?>/admin/inventories/get-batches-json?id_hh=${idHh}`)
+                .then(response => response.json())
                 .then(data => {
                     let html = '';
-
                     if (Array.isArray(data) && data.length > 0) {
                         data.forEach(batch => {
-
-                            // fallback nếu backend chưa có field mới
-                            const ngayNhap = batch.ngay_nhap_hien_thi 
-                                ?? batch.ngay_nhap 
-                                ?? 'N/A';
-
                             html += `<tr>
                                 <td>${batch.id_lo ?? ''}</td>
-                                <td>${ngayNhap}</td>
-                                <td>${batch.hsd_lo ?? ''}</td>
+                                <td>${batch.nhap_f ?? '—'}</td> 
+                                <td>${batch.hsd_f ?? ''}</td>
                                 <td class="text-center">${batch.so_luong_con_lai ?? 0}</td>
                                 <td>
-                                    <span class="badge bg-${batch.color ?? 'secondary'}">
-                                        ${batch.ten_trang_thai ?? 'Không xác định'}
+                                    <span class="badge ${batch.badge_class}">
+                                        ${batch.ten_tt_f ?? 'N/A'}
                                     </span>
                                 </td>
+                                <td>${batch.ten_km_f ?? 'Không'}</td>
                             </tr>`;
                         });
                     } else {
-                        html = '<tr><td colspan="5" class="text-center">Không còn lô hàng nào tồn kho.</td></tr>';
+                        html = '<tr><td colspan="6" class="text-center">Không còn lô hàng nào tồn kho.</td></tr>';
                     }
-
                     document.getElementById('batchTableBody').innerHTML = html;
-
-                    const modalEl = document.getElementById('batchDetailModal');
-                    const modal = new bootstrap.Modal(modalEl);
-                    modal.show();
+                    new bootstrap.Modal(document.getElementById('batchDetailModal')).show();
                 })
                 .catch(err => {
-                    console.error("Lỗi lấy dữ liệu lô:", err);
-                    document.getElementById('batchTableBody').innerHTML =
-                        '<tr><td colspan="5" class="text-center text-danger">Lỗi tải dữ liệu!</td></tr>';
+                    console.error("Lỗi:", err);
+                    alert("Có lỗi xảy ra khi tải dữ liệu!");
                 });
-        });
+        }
     });
 });
 
