@@ -178,7 +178,7 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
                                 <th>Giá vốn</th>
                                 <th>Khuyến mãi</th>
                                 <th>Trạng thái</th>
-                                <th>Thao tác</th>
+                                <!-- <th>Thao tác</th> -->
                             </tr>
                         </thead>
 
@@ -236,7 +236,7 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
                                 </span>
                             </td>
 
-                            <td>
+                            <!-- <td>
                                 <button type="button" class="btn btn-sm btn-warning btn-edit-batch"
                                     data-id-lo="<?= $row['id_lo'] ?>"
                                     data-hsd="<?= date('Y-m-d\TH:i', $hsd_ts) ?>"
@@ -244,7 +244,7 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
                                     data-status="<?= $row['id_trang_thai_lo'] ?>">
                                     <i class="bi bi-pencil-square"></i> Sửa
                                 </button>
-                            </td>
+                            </td> -->
                         </tr>
                         <?php endforeach; else: ?>
                             <tr>

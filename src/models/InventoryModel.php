@@ -6,7 +6,7 @@ use PDO;
 class InventoryModel extends BaseModel {
 
     // ✅ SỬA: subquery gia_hien_tai lọc đúng thoi_diem hiện tại + tồn > 0
-    public function getAllProducts() {
+    public function getAllProducts($search = '') {
         $sql = "SELECT h.id_hh, h.ten_hh, h.link_anh, lhh.ten_loai, dvt.dvt,
                     COUNT(l.id_lo) as so_luong_lo,
                     MIN(CASE WHEN l.so_luong_con_lai > 0 THEN l.hsd_lo ELSE NULL END) as hsd_gan_nhat,
@@ -14,10 +14,8 @@ class InventoryModel extends BaseModel {
                     (SELECT g.gia_hien_tai 
                         FROM gia_ban_hien_tai g 
                         JOIN lo_hang l2 ON g.id_lo = l2.id_lo
-                        JOIN thoi_diem td ON g.id_td = td.id_td
                         WHERE l2.id_hh = h.id_hh 
-                          AND NOW() BETWEEN td.ngay_bd_gia_ban AND td.ngay_kt_gia_ban
-                          AND l2.so_luong_con_lai > 0
+                        AND l2.so_luong_con_lai > 0
                         ORDER BY l2.hsd_lo ASC 
                         LIMIT 1
                     ) as gia_hien_tai
@@ -25,10 +23,24 @@ class InventoryModel extends BaseModel {
                 LEFT JOIN loai_hang_hoa lhh ON h.id_loai2 = lhh.id_loai2
                 LEFT JOIN dvt ON h.id_dvt = dvt.id_dvt
                 LEFT JOIN lo_hang l ON h.id_hh = l.id_hh
-                WHERE h.duoc_phep_ban = 1
-                GROUP BY h.id_hh, h.ten_hh, h.link_anh, lhh.ten_loai, dvt.dvt
+                WHERE h.duoc_phep_ban = 1";
+
+        // ← THÊM điều kiện tìm kiếm
+        if (!empty($search)) {
+            $sql .= " AND (h.ten_hh LIKE :search OR h.id_hh LIKE :search)";
+        }
+
+        $sql .= " GROUP BY h.id_hh, h.ten_hh, h.link_anh, lhh.ten_loai, dvt.dvt
                 ORDER BY h.id_hh DESC";
-        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $this->db->prepare($sql);
+
+        if (!empty($search)) {
+            $stmt->bindValue(':search', '%' . $search . '%');
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Lấy danh sách lô cho AJAX (modal trang Index)
@@ -391,4 +403,6 @@ class InventoryModel extends BaseModel {
         }
         return false;
     }
+
+    
 }

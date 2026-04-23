@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\BaseModel;
+use App\Models\InventoryModel;
 use PDO;
 use Exception;
 
@@ -120,7 +121,6 @@ class OrderModel extends BaseModel {
         try {
             $this->db->beginTransaction();
 
-            // Lấy id_td đang hiệu lực
             $stmtTd = $this->db->query("
                 SELECT id_td FROM thoi_diem 
                 WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban 
@@ -129,10 +129,11 @@ class OrderModel extends BaseModel {
             $td = $stmtTd->fetch(PDO::FETCH_ASSOC);
             $id_td = $td['id_td'] ?? null;
 
+            $affectedProducts = []; // ← THÊM: thu thập id_hh cần cập nhật giá
+
             foreach ($cartItems as $itemId => $item) {
                 $quantity = (int)($item['quantity'] ?? 0);
 
-                // 1. Tìm lô HSD gần nhất còn đủ hàng (FEFO)
                 $stmtLo = $this->db->prepare("
                     SELECT id_lo, so_luong_con_lai, gia_von_nhap
                     FROM lo_hang
@@ -151,7 +152,6 @@ class OrderModel extends BaseModel {
 
                 $id_lo = $lot['id_lo'];
 
-                // 2. Lấy giá bán + % KM tại thời điểm đặt
                 $stmtGia = $this->db->prepare("
                     SELECT g.gia_hien_tai, km.phan_tram_km
                     FROM gia_ban_hien_tai g
@@ -163,25 +163,22 @@ class OrderModel extends BaseModel {
                 $stmtGia->execute([$id_lo, $id_td]);
                 $giaInfo = $stmtGia->fetch(PDO::FETCH_ASSOC);
 
-                $don_gia   = (float)($giaInfo['gia_hien_tai'] ?? 0);
-                $phan_tram = (float)($giaInfo['phan_tram_km'] ?? 0);
+                $don_gia    = (float)($giaInfo['gia_hien_tai'] ?? 0);
+                $phan_tram  = (float)($giaInfo['phan_tram_km'] ?? 0);
                 $gia_sau_km = $don_gia * (1 - $phan_tram / 100);
 
-                // 3. Lưu chi tiết đơn hàng (kèm giá tại thời điểm đặt)
                 $this->db->prepare("
                     INSERT INTO chi_tiet_don_hang 
                         (id_dh, id_hh, id_lo, so_luong_ban_ra, don_gia, gia_sau_km) 
                     VALUES (?, ?, ?, ?, ?, ?)
                 ")->execute([$orderId, $itemId, $id_lo, $quantity, $don_gia, $gia_sau_km]);
 
-                // 4. Trừ tồn kho lô
                 $this->db->prepare("
                     UPDATE lo_hang 
                     SET so_luong_con_lai = so_luong_con_lai - ?
                     WHERE id_lo = ?
                 ")->execute([$quantity, $id_lo]);
 
-                // 5. Cập nhật trạng thái lô sau khi trừ
                 $this->db->prepare("
                     UPDATE lo_hang SET id_trang_thai_lo = 
                         CASE 
@@ -191,15 +188,24 @@ class OrderModel extends BaseModel {
                         END
                     WHERE id_lo = ?
                 ")->execute([$id_lo]);
+
+                $affectedProducts[] = $itemId; // ← THÊM
             }
 
-            $this->db->commit();
+            $this->db->commit(); // ← COMMIT TRƯỚC
+
+            // 6. Cập nhật WAC SAU KHI commit ← QUAN TRỌNG
+            $inventoryModel = new \App\Models\InventoryModel();
+            foreach ($affectedProducts as $id_hh) {
+                $inventoryModel->updatePriceForProduct($id_hh);
+            }
+
             return true;
 
         } catch (\Exception $e) {
             $this->db->rollBack();
             error_log("Lỗi lưu chi tiết đơn hàng: " . $e->getMessage());
-            throw $e; // ném lại để CheckoutController bắt được
+            throw $e;
         }
     }
 

@@ -94,7 +94,7 @@ $router->add('GET', 'admin/suppliers/delete/{id}', 'AdminController@deleteSuppli
 
 $router->add('GET', 'admin/orders', 'AdminController@orders');
 $router->add('GET', 'admin/order-detail/{id}', 'AdminController@orderDetail');
-$router->add('POST', 'admin/order-update-status', 'AdminController@updateOrderStatus');
+$router->add('POST', 'admin/order-update-status', 'AdminController@orderUpdateStatus'); // ← đổi hàm
 
 // --- Quản lý Khách hàng (Users) ---
 $router->add('GET', 'admin/users', 'AdminController@users');
@@ -127,6 +127,8 @@ $router->add('GET', 'admin/inventories/get-batches-json', 'AdminController@getBa
 // Các route cập nhật và xóa (Xóa dấu / ở trước chữ admin)
 $router->add('POST', 'admin/inventories/update-batch', 'AdminController@updateBatch');
 $router->add('GET', 'admin/inventories/delete-batch', 'AdminController@deleteBatch');
+
+
 
 // KHỞI CHẠY
 $router->run();

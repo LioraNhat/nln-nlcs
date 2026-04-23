@@ -189,6 +189,16 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
                                     <?= $lot['ten_trang_thai_lo'] ?>
                                 </span>
                             </td>
+                            <!-- THÊM CỘT NÀY -->
+                            <td>
+                                <button type="button" class="btn btn-sm btn-warning btn-edit-batch"
+                                    data-id-lo="<?= $lot['id_lo'] ?>"
+                                    data-hsd="<?= date('Y-m-d\TH:i', strtotime($lot['hsd_lo'])) ?>"
+                                    data-stock="<?= $lot['so_luong_con_lai'] ?>"
+                                    data-status="<?= $lot['id_trang_thai_lo'] ?>">
+                                    <i class="bi bi-pencil-square"></i> Sửa
+                                </button>
+                            </td>
                         </tr>
 
                         <?php endforeach; else: ?>
@@ -207,5 +217,62 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
         </div>
     </div>
 </main>
+<!-- ====== MODAL SỬA LÔ ====== -->
+<div class="modal fade" id="modalEditBatch" tabindex="-1"></div>
+    <div class="modal-dialog">
+        <form action="<?= BASE_PATH ?>/admin/inventories/updateBatch" method="POST">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold">Cập nhật lô: <span id="display-id-lo"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id_lo" id="input-id-lo">
+                    <!-- QUAN TRỌNG: truyền id_hh để redirect đúng trang -->
+                    <input type="hidden" name="id_hh" value="<?= $product['id_hh'] ?? '' ?>">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Hạn sử dụng</label>
+                        <input type="datetime-local" name="hsd_lo" id="input-hsd" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số lượng tồn kho (còn lại)</label>
+                        <input type="number" name="so_luong_con_lai" id="input-stock" class="form-control" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Trạng thái lô hàng</label>
+                        <select name="id_trang_thai_lo" id="input-status" class="form-select">
+                            <option value="TTL01">Còn hàng (Đang bán)</option>
+                            <option value="TTL02">Sắp hết</option>
+                            <option value="TTL03">Hết hàng</option>
+                            <option value="TTL04">Sắp hết hạn</option>
+                            <option value="TTL05">Hết hạn / Đã hủy</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning fw-bold">Cập nhật thay đổi</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const editModal = new bootstrap.Modal(document.getElementById('modalEditBatch'));
+    document.querySelectorAll('.btn-edit-batch').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('display-id-lo').innerText = this.dataset.idLo;
+            document.getElementById('input-id-lo').value       = this.dataset.idLo;
+            document.getElementById('input-hsd').value         = this.dataset.hsd;
+            document.getElementById('input-stock').value       = this.dataset.stock;
+            document.getElementById('input-status').value      = this.dataset.status;
+            editModal.show();
+        });
+    });
+});
+</script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

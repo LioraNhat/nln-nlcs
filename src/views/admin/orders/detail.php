@@ -3,7 +3,13 @@ require_once __DIR__ . '/../layouts/header.php';
 require_once __DIR__ . '/../layouts/sidebar.php';
 
 // Mảng các trạng thái có thể có
-$statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao hàng thành công', 'Đã hủy'];
+$statusList = [
+    'TTD01' => 'Chờ xử lý',
+    'TTD02' => 'Đã xác nhận',
+    'TTD03' => 'Đang giao hàng',
+    'TTD04' => 'Giao hàng thành công',
+    'TTD05' => 'Đã hủy',
+];
 ?>
 
 <main class="app-main">
@@ -164,10 +170,10 @@ $statusList = ['Chờ xử lý', 'Đã xác nhận', 'Đang giao hàng', 'Giao h
                                         Trạng thái hiện tại:
                                     </label>
                                     <select name="trang_thai" class="form-select form-select-lg mb-3">
-                                        <?php foreach ($statusList as $st): ?>
-                                            <option value="<?= $st ?>"
-                                                <?= $order['ten_trang_thai'] == $st ? 'selected' : '' ?>>
-                                                <?= $st ?>
+                                        <?php foreach ($statusList as $ma => $ten): ?>
+                                            <option value="<?= $ma ?>"
+                                                <?= ($order['id_ttd'] ?? '') == $ma ? 'selected' : '' ?>>
+                                                <?= $ten ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>

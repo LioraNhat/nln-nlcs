@@ -158,20 +158,13 @@ class CheckoutController extends BaseController {
                 $this->cartModel->removeProductForUser($userCartId, $id);
             }
 
-            // --- ĐÂY LÀ PHẦN SỬA QUAN TRỌNG ---
+            // ĐẶT ĐÚNG THỨ TỰ NÀY
+            $_SESSION['last_order_id'] = $newOrderId;  // ← SET TRƯỚC
             unset($_SESSION['cart_for_checkout']); 
-            
-            // Xóa session giỏ hàng để Header cập nhật
             $_SESSION['cart'] = []; 
-            
-            // QUAN TRỌNG: Phải set cart_count về 0 vì header.php đang đọc biến này
             $_SESSION['cart_count'] = 0; 
-            
-            // Ghi dữ liệu session xuống ngay để redirect không bị mất
-            session_write_close();
-            // ----------------------------------
+            session_write_close();                     // ← GHI SAU CÙNG
 
-            $_SESSION['last_order_id'] = $newOrderId; 
             $this->redirect('/checkout/success');
 
         } catch (\Exception $e) {

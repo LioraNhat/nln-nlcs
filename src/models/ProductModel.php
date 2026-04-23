@@ -15,18 +15,13 @@ class ProductModel extends BaseModel {
                     SELECT id_hh, MIN(hsd_lo) as min_hsd
                     FROM lo_hang
                     WHERE so_luong_con_lai > 0
-                    AND hsd_lo > NOW()
+                    AND id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
                     GROUP BY id_hh
                 ) fefo ON l1.id_hh = fefo.id_hh AND l1.hsd_lo = fefo.min_hsd
-                WHERE l1.so_luong_con_lai > 0 AND l1.hsd_lo > NOW()
-                -- ✅ Thêm điều kiện vào l1, tránh lấy lô hết hàng trùng hsd
             ) l ON h.id_hh = l.id_hh
             LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
-                AND g.id_td IN (
-                    SELECT id_td FROM thoi_diem 
-                    WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban
-                )
-            LEFT JOIN khuyen_mai km ON l.id_km = km.id_km 
+            LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
+                AND km.trang_thai_km = 'Đang diễn ra'
                 AND NOW() BETWEEN km.ngay_bd_km AND km.ngay_kt_km
         ";
     }
@@ -105,35 +100,15 @@ class ProductModel extends BaseModel {
                     g.gia_hien_tai,
                     km.phan_tram_km,
                     km.ten_km,
-                    (SELECT SUM(l2.so_luong_con_lai) 
-                    FROM lo_hang l2 
-                    WHERE l2.id_hh = h.id_hh 
-                    AND l2.so_luong_con_lai > 0 
-                    AND l2.hsd_lo > NOW()
-                    ) as so_luong_ton_hh
+                    SUM(l.so_luong_con_lai) as so_luong_ton_hh
                 FROM hang_hoa h
-                LEFT JOIN (
-                    SELECT l1.id_hh, l1.id_lo, l1.id_km
-                    FROM lo_hang l1
-                    INNER JOIN (
-                        SELECT id_hh, MIN(hsd_lo) as min_hsd
-                        FROM lo_hang
-                        WHERE so_luong_con_lai > 0
-                        AND hsd_lo > NOW()
-                        GROUP BY id_hh
-                    ) fefo ON l1.id_hh = fefo.id_hh 
-                        AND l1.hsd_lo = fefo.min_hsd
-                    WHERE l1.so_luong_con_lai > 0 
-                    AND l1.hsd_lo > NOW()
-                ) l ON h.id_hh = l.id_hh
+                LEFT JOIN lo_hang l ON h.id_hh = l.id_hh
+                    AND l.so_luong_con_lai > 0
+                    AND l.id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
                 LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
-                    AND g.id_td IN (
-                        SELECT id_td FROM thoi_diem
-                        WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban
-                    )
                 LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
+                    AND km.trang_thai_km = 'Đang diễn ra'
                     AND NOW() BETWEEN km.ngay_bd_km AND km.ngay_kt_km
-                    -- ✅ Bỏ trang_thai_km = 1
                 WHERE h.id_hh = :id_hh 
                 AND h.duoc_phep_ban = 1
                 GROUP BY h.id_hh
@@ -205,7 +180,6 @@ class ProductModel extends BaseModel {
                 FROM hang_hoa h
                 LEFT JOIN loai_hang_hoa lhh ON h.id_loai2 = lhh.id_loai2
                 WHERE 1=1";
-
         $params = [];
 
         if (!empty($keyword)) {
@@ -214,7 +188,7 @@ class ProductModel extends BaseModel {
         }
 
         if (!empty($categoryId)) {
-            $sql .= " AND lhh.id_dm = :category_id";
+            $sql .= " AND lhh.id_dm = :category_id"; // ← THÊM lọc danh mục
             $params[':category_id'] = $categoryId;
         }
 
@@ -227,50 +201,35 @@ class ProductModel extends BaseModel {
     // ============================================
     // 3. CÁC PHƯƠNG THỨC CHO ADMIN
     // ============================================
-    public function getAllProducts($keyword = '', $categoryId = '', $limit = 20, $offset = 0) {
+    public function getAllProducts($keyword = '', $limit = 20, $offset = 0, $categoryId = '') {
         $sql = "SELECT h.id_hh, h.ten_hh, h.link_anh, h.duoc_phep_ban,
-                    lhh.ten_loai, dvt.dvt,
-                    g.gia_hien_tai,
-                    MIN(l.hsd_lo) as hsd_lo,
-                    COALESCE(SUM(CASE WHEN l.so_luong_con_lai > 0 THEN l.so_luong_con_lai ELSE 0 END), 0) as tong_ton,
+                    lhh.ten_loai, dvt.dvt, g.gia_hien_tai,
+                    MIN(l.hsd_lo) as hsd_lo, 
+                    SUM(l.so_luong_con_lai) as tong_ton,
                     (SELECT id_lo FROM lo_hang 
                         WHERE id_hh = h.id_hh AND so_luong_con_lai > 0 
-                        AND hsd_lo > NOW()
                         ORDER BY hsd_lo ASC LIMIT 1) as id_lo
                 FROM hang_hoa h
                 LEFT JOIN loai_hang_hoa lhh ON h.id_loai2 = lhh.id_loai2
                 LEFT JOIN dvt ON h.id_dvt = dvt.id_dvt
-                LEFT JOIN lo_hang l ON h.id_hh = l.id_hh
-                LEFT JOIN gia_ban_hien_tai g ON g.id_lo = (
-                    SELECT id_lo FROM lo_hang 
-                    WHERE id_hh = h.id_hh AND so_luong_con_lai > 0 AND hsd_lo > NOW()
-                    ORDER BY hsd_lo ASC LIMIT 1
-                ) AND g.id_td = (
-                    SELECT id_td FROM thoi_diem 
-                    WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban 
-                    LIMIT 1
-                )
+                LEFT JOIN lo_hang l ON h.id_hh = l.id_hh AND l.so_luong_con_lai > 0
+                LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo 
                 WHERE 1=1";
-
-        $params = [];
 
         if (!empty($keyword)) {
             $sql .= " AND (h.id_hh LIKE :keyword OR h.ten_hh LIKE :keyword)";
-            $params[':keyword'] = '%' . $keyword . '%';
         }
 
-        // ✅ Thêm lọc theo danh mục
         if (!empty($categoryId)) {
-            $sql .= " AND lhh.id_dm = :category_id";
-            $params[':category_id'] = $categoryId;
+            $sql .= " AND lhh.id_dm = :category_id"; // ← THÊM lọc danh mục
         }
 
         $sql .= " GROUP BY h.id_hh ORDER BY h.id_hh DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $this->db->prepare($sql);
-        foreach ($params as $key => $val) {
-            $stmt->bindValue($key, $val);
-        }
+
+        if (!empty($keyword)) $stmt->bindValue(':keyword', '%' . $keyword . '%');
+        if (!empty($categoryId)) $stmt->bindValue(':category_id', $categoryId);
         $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
         $stmt->execute();

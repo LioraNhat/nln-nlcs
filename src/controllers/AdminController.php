@@ -135,32 +135,26 @@ class AdminController extends BaseController {
 
     // QUẢN LÝ HÀNG HÓA
 
-    // ✅ Sửa lại
     public function products() {
         $productsPerPage = 20;
-        $currentPage     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $searchKeyword   = $_GET['keyword'] ?? '';      // ✅ đúng name trong form
-        $categoryId      = $_GET['category_id'] ?? '';  // ✅ thêm lọc danh mục
-        $offset          = ($currentPage - 1) * $productsPerPage;
-
-        $totalProducts = $this->productModel->countAllProducts($searchKeyword, $categoryId);
-        $totalPages    = ceil($totalProducts / $productsPerPage);
-
-        $products = $this->productModel->getAllProducts(
-            $searchKeyword,
-            $categoryId,       // ✅ truyền vào
-            $productsPerPage,
-            $offset
-        );
+        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $searchKeyword = $_GET['keyword'] ?? '';   // ← SỬA: 'search' thành 'keyword'
+        $categoryId = $_GET['category_id'] ?? '';  // ← THÊM
+        $offset = ($currentPage - 1) * $productsPerPage;
+        
+        $totalProducts = $this->productModel->countAllProducts($searchKeyword, $categoryId); // ← THÊM $categoryId
+        $totalPages = ceil($totalProducts / $productsPerPage);
+        
+        $products = $this->productModel->getAllProducts($searchKeyword, $productsPerPage, $offset, $categoryId); // ← THÊM $categoryId
 
         $this->renderView('admin/products/index', [
             'title'         => 'Quản lý sản phẩm & Lô hàng',
             'user'          => Auth::user(),
             'products'      => $products,
-            'categories'    => $this->categoryModel->getAllCategories(), // ✅ truyền ra view
             'totalPages'    => $totalPages,
             'currentPage'   => $currentPage,
             'searchKeyword' => $searchKeyword,
+            'categories'    => $this->categoryModel->getAllCategories(), // ← THÊM
             'success'       => $_SESSION['success'] ?? null,
             'error'         => $_SESSION['error'] ?? null
         ]);
@@ -281,36 +275,29 @@ class AdminController extends BaseController {
      * API trả về danh sách các lô hàng còn tồn của một sản phẩm
      * Phục vụ cho việc hiển thị Modal chi tiết lô hàng
      */
-    // ✅ Sửa lại getBatches() trong AdminController
     public function getBatches() {
-        if (ob_get_length()) ob_clean();
-        $id_hh = $_GET['id_hh'] ?? '';
+        if (ob_get_length()) ob_clean(); 
 
+        $id_hh = $_GET['id_hh'] ?? '';
+        
         try {
             $batches = $this->productModel->getBatchesByProductId($id_hh);
-
+            
             foreach ($batches as &$b) {
-                // ✅ Đặt tên key đúng với những gì JS đang đọc
-                $b['hsd_f']    = !empty($b['hsd_lo'])
-                    ? date('d/m/Y', strtotime($b['hsd_lo']))
-                    : '—';
-
-                $b['nhap_f']   = !empty($b['ngay_lap_phieu_nhap'])
-                    ? date('d/m/Y', strtotime($b['ngay_lap_phieu_nhap']))
+                $b['hsd_lo'] = date('d/m/Y', strtotime($b['hsd_lo']));
+                
+                // Cột này hiện tại trong SQL Model đã là 'ngay_lap_phieu_nhap'
+                $b['ngay_nhap_hien_thi'] = !empty($b['ngay_lap_phieu_nhap']) 
+                    ? date('d/m/Y', strtotime($b['ngay_lap_phieu_nhap'])) 
                     : 'N/A';
-
-                $b['ten_tt_f'] = $b['ten_trang_thai_lo'] ?? 'N/A';
-                $b['ten_km_f'] = $b['ten_km'] ?? 'Không';
-
-                // Badge màu theo trạng thái
-                $b['badge_class'] = match($b['id_trang_thai_lo'] ?? '') {
-                    'TTL01' => 'bg-success',
-                    'TTL02' => 'bg-warning text-dark',
-                    'TTL03' => 'bg-danger',
-                    'TTL04' => 'bg-secondary',
-                    'TTL05' => 'bg-dark',
-                    default => 'bg-secondary'
-                };
+                
+                $b['color'] = 'success'; 
+                if ($b['id_trang_thai_lo'] == 'TTL02') $b['color'] = 'warning';
+                if ($b['id_trang_thai_lo'] == 'TTL03') $b['color'] = 'danger';
+                if ($b['id_trang_thai_lo'] == 'TTL04') $b['color'] = 'secondary';
+                
+                // Thêm dòng này để JS không bị lỗi nếu bạn dùng 'ten_trang_thai' ở giao diện
+                $b['ten_trang_thai'] = $b['ten_trang_thai_lo'] ?? ''; 
             }
 
             header('Content-Type: application/json');
@@ -723,9 +710,11 @@ class AdminController extends BaseController {
     // DANH SÁCH SẢN PHẨM
     // =============================
     public function inventories() {
-        // Tự động cập nhật trạng thái lô trước khi hiển thị
         $this->inventoryModel->autoUpdateLotStatus();
-        $products = $this->inventoryModel->getAllProducts();
+        
+        $search = $_GET['search'] ?? ''; // ← THÊM
+
+        $products = $this->inventoryModel->getAllProducts($search); // ← THÊM $search
 
         $this->renderView('admin/inventories/index', [
             'title'    => 'Quản lý tồn kho',
@@ -766,6 +755,7 @@ class AdminController extends BaseController {
             'lots'       => $lots,
             'suppliers'  => $suppliers,
             'promotions' => $promotions,
+            'margin'     => $product['phan_tram_loi_nhuan'] ?? 30,  // ← THÊM DÒNG NÀY
             'success'    => $_SESSION['success'] ?? null,
             'error'      => $_SESSION['error'] ?? null
         ]);
@@ -818,7 +808,8 @@ class AdminController extends BaseController {
             'title'   => 'Chi tiết lô hàng: ' . ($product['ten_hh'] ?? $id),
             'user'    => Auth::user(),
             'product' => $product,
-            'lots'    => $lots
+            'lots'    => $lots,
+            'margin'  => $product['phan_tram_loi_nhuan'] ?? 30,  // ← THÊM DÒNG NÀY
         ]);
     }
 
@@ -1153,18 +1144,9 @@ class AdminController extends BaseController {
      */
     public function orderUpdateStatus() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Lấy dữ liệu
-            $id = $_POST['id_dh'] ?? '';
-            $tenTrangThai = $_POST['trang_thai'] ?? '';
-
-            $map = [
-                'Chờ xử lý'            => 'TTD01',
-                'Đã xác nhận'          => 'TTD02',
-                'Đang giao hàng'       => 'TTD03',
-                'Giao hàng thành công' => 'TTD04',
-                'Đã hủy'               => 'TTD05',
-            ];
-            $status = $map[$tenTrangThai] ?? null;
+            
+            $id     = $_POST['id_dh'] ?? '';
+            $status = $_POST['trang_thai'] ?? ''; // ← giờ là TTD01, TTD02...
 
             if (empty($id) || empty($status)) {
                 $_SESSION['error'] = 'Dữ liệu không hợp lệ!';
@@ -1172,17 +1154,14 @@ class AdminController extends BaseController {
                 return;
             }
 
-            // Gọi Model cập nhật (Dùng $this->orderModel đã khởi tạo ở __construct)
             if ($this->orderModel->updateOrderStatus($id, $status)) {
-                $_SESSION['success'] = "Đã cập nhật đơn hàng #$id sang trạng thái: $status";
+                $_SESSION['success'] = "Đã cập nhật trạng thái đơn hàng #$id thành công!";
             } else {
                 $_SESSION['error'] = "Lỗi cập nhật trạng thái!";
             }
 
-            // Quay lại trang chi tiết đúng
             $this->redirect("/admin/order-detail/$id");
         } else {
-            // Nếu không phải POST thì đá về danh sách
             $this->redirect('/admin/orders');
         }
     }
