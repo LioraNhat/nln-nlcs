@@ -117,27 +117,89 @@ class OrderModel extends BaseModel {
     }
 
     public function addOrderDetails($orderId, $cartItems) {
-        $sql = "INSERT INTO chi_tiet_don_hang (id_dh, id_hh, id_lo, so_luong_ban_ra) VALUES (?, ?, ?, ?)";
-        $stmt = $this->db->prepare($sql);
-
         try {
             $this->db->beginTransaction();
-            foreach ($cartItems as $itemId => $item) {
-                $quantity = $item['quantity'] ?? 0;
-                $id_lo = $item['id_lo'] ?? null;
 
-                if (empty($id_lo)) {
-                    throw new \Exception("Sản phẩm {$item['name']} không tìm thấy lô hàng hợp lệ.");
+            // Lấy id_td đang hiệu lực
+            $stmtTd = $this->db->query("
+                SELECT id_td FROM thoi_diem 
+                WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban 
+                LIMIT 1
+            ");
+            $td = $stmtTd->fetch(PDO::FETCH_ASSOC);
+            $id_td = $td['id_td'] ?? null;
+
+            foreach ($cartItems as $itemId => $item) {
+                $quantity = (int)($item['quantity'] ?? 0);
+
+                // 1. Tìm lô HSD gần nhất còn đủ hàng (FEFO)
+                $stmtLo = $this->db->prepare("
+                    SELECT id_lo, so_luong_con_lai, gia_von_nhap
+                    FROM lo_hang
+                    WHERE id_hh = ? 
+                    AND so_luong_con_lai >= ?
+                    AND id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
+                    ORDER BY hsd_lo ASC
+                    LIMIT 1
+                ");
+                $stmtLo->execute([$itemId, $quantity]);
+                $lot = $stmtLo->fetch(PDO::FETCH_ASSOC);
+
+                if (!$lot) {
+                    throw new \Exception("Sản phẩm {$item['name']} không đủ hàng trong kho.");
                 }
 
-                $stmt->execute([$orderId, $itemId, $id_lo, $quantity]);
+                $id_lo = $lot['id_lo'];
+
+                // 2. Lấy giá bán + % KM tại thời điểm đặt
+                $stmtGia = $this->db->prepare("
+                    SELECT g.gia_hien_tai, km.phan_tram_km
+                    FROM gia_ban_hien_tai g
+                    LEFT JOIN lo_hang l ON g.id_lo = l.id_lo
+                    LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
+                    WHERE g.id_lo = ? AND g.id_td = ?
+                    LIMIT 1
+                ");
+                $stmtGia->execute([$id_lo, $id_td]);
+                $giaInfo = $stmtGia->fetch(PDO::FETCH_ASSOC);
+
+                $don_gia   = (float)($giaInfo['gia_hien_tai'] ?? 0);
+                $phan_tram = (float)($giaInfo['phan_tram_km'] ?? 0);
+                $gia_sau_km = $don_gia * (1 - $phan_tram / 100);
+
+                // 3. Lưu chi tiết đơn hàng (kèm giá tại thời điểm đặt)
+                $this->db->prepare("
+                    INSERT INTO chi_tiet_don_hang 
+                        (id_dh, id_hh, id_lo, so_luong_ban_ra, don_gia, gia_sau_km) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ")->execute([$orderId, $itemId, $id_lo, $quantity, $don_gia, $gia_sau_km]);
+
+                // 4. Trừ tồn kho lô
+                $this->db->prepare("
+                    UPDATE lo_hang 
+                    SET so_luong_con_lai = so_luong_con_lai - ?
+                    WHERE id_lo = ?
+                ")->execute([$quantity, $id_lo]);
+
+                // 5. Cập nhật trạng thái lô sau khi trừ
+                $this->db->prepare("
+                    UPDATE lo_hang SET id_trang_thai_lo = 
+                        CASE 
+                            WHEN so_luong_con_lai = 0 THEN 'TTL03'
+                            WHEN so_luong_con_lai <= 5 THEN 'TTL02'
+                            ELSE id_trang_thai_lo
+                        END
+                    WHERE id_lo = ?
+                ")->execute([$id_lo]);
             }
+
             $this->db->commit();
             return true;
+
         } catch (\Exception $e) {
             $this->db->rollBack();
             error_log("Lỗi lưu chi tiết đơn hàng: " . $e->getMessage());
-            return false;
+            throw $e; // ném lại để CheckoutController bắt được
         }
     }
 

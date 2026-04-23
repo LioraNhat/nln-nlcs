@@ -175,28 +175,37 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 7. XỬ LÝ TĂNG/GIẢM VÀ TÍNH TIỀN GIỎ HÀNG (Giữ nguyên)
     function recalculateClientTotals() {
-    let subtotal = 0;
-    let totalDiscount = 0;
-    const cartTbody = document.querySelector('#cart-tbody');
-    if (!cartTbody) return;
+        let subtotal = 0;
+        let totalDiscount = 0;
+        const cartTbody = document.querySelector('#cart-tbody');
+        if (!cartTbody) return;
 
-    cartTbody.querySelectorAll('tr').forEach(row => {
-        const checkbox = row.querySelector('.cart-item-select');
-        if (checkbox && checkbox.checked) {
-            const unitPrice = parseFloat(row.dataset.subtotal);       // giá 1 sp
+        cartTbody.querySelectorAll('tr').forEach(row => {
+            const checkbox = row.querySelector('.cart-item-select');
+            const quantityField = row.querySelector('.quantity-field');
+            
+            // 1. Cập nhật "Tạm tính" cho từng hàng (cột thứ 5 của bảng)
+            const unitPrice = parseFloat(row.dataset.subtotal) || 0;
             const discountPercent = parseFloat(row.dataset.discountPercent) || 0;
-            const quantity = parseInt(row.querySelector('.quantity-field').value) || 0;
+            const quantity = parseInt(quantityField.value) || 0;
+            const itemTotal = unitPrice * quantity;
+            
+            // Cập nhật text hiển thị tạm tính cho riêng hàng này (nếu bạn có class hiển thị)
+            const subtotalCell = row.querySelector('.cart-item-subtotal .product-price');
+            if(subtotalCell) subtotalCell.textContent = itemTotal.toLocaleString('vi-VN') + ' đ';
 
-            subtotal += unitPrice * quantity;  // SỬA: nhân quantity
-            totalDiscount += (unitPrice * discountPercent / 100) * quantity;
-        }
-    });
+            // 2. Tính tổng giỏ hàng (chỉ tính những hàng được chọn)
+            if (checkbox && checkbox.checked) {
+                subtotal += itemTotal;
+                totalDiscount += (unitPrice * discountPercent / 100) * quantity;
+            }
+        });
 
-    let total = subtotal - totalDiscount;
-    document.querySelector('#cart-subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
-    document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
-    document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
-}
+        let total = subtotal - totalDiscount;
+        document.querySelector('#cart-subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
+        document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
+        document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
+    }
     
     function updateCart(id_hh, quantity) {
         const formData = new FormData();
@@ -210,12 +219,13 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                document.querySelector('.cart-count').textContent = data.cartCount;
+                updateHeaderCartCount(data.cartCount);
                 const itemRow = document.querySelector('#cart-item-' + id_hh);
                 if (itemRow) {
                     if (quantity > 0) {
                         // Cập nhật quantity field
                         itemRow.querySelector('.quantity-field').value = quantity;
+                        
                     } else {
                         itemRow.remove();
                     }
@@ -636,10 +646,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        const cartCountSpan = document.querySelector('.cart-count');
-                        if (cartCountSpan) {
-                            cartCountSpan.textContent = data.cartCount;
-                        }
+                        updateHeaderCartCount(0);
                         location.reload();
                     } else {
                         showToast('Có lỗi xảy ra!', 'error');
@@ -697,6 +704,19 @@ document.addEventListener("DOMContentLoaded", function() {
         setTimeout(() => toast.remove(), 3500);
     }
 
+    window.updateHeaderCartCount = function(count) {
+        const cartCountSpan = document.querySelector('.cart-count');
+        if (cartCountSpan) {
+            cartCountSpan.textContent = count;
+            
+            // Mẹo nhỏ: Nếu số lượng là 0 thì ẩn đi hoặc để số 0 tùy giao diện của bạn
+            if (parseInt(count) <= 0) {
+                cartCountSpan.style.display = 'none'; 
+            } else {
+                cartCountSpan.style.display = 'inline-block'; // Hoặc block
+            }
+        }
+    }
 });
 
 /* =======================================================

@@ -119,7 +119,7 @@
                     <img src="<?php echo BASE_PATH; ?>/images/home.png" alt="Trang chủ">
                 </a>
             </li>
-            <li><a href="#">HOT DEAL</a></li>
+            
             <?php if (isset($categories) && !empty($categories)): 
                 foreach ($categories as $category): ?>
                 <li>
@@ -128,7 +128,6 @@
                     </a>
                 </li>
             <?php endforeach; endif; ?>
-            <li><a href="#">Gợi ý món ăn</a></li>
         </ul>
     </div>
 </nav>

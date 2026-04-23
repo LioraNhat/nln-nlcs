@@ -8,15 +8,20 @@ use PDO;
 class CartModel extends BaseModel {
     private function getProductJoins() {
         return "
-            LEFT JOIN lo_hang l ON h.id_hh = l.id_hh 
-                AND l.so_luong_con_lai > 0 
-                AND l.hsd_lo >= NOW() -- Chỉ lấy lô còn hàng và còn hạn
+            LEFT JOIN lo_hang l ON l.id_lo = (
+                SELECT id_lo FROM lo_hang
+                WHERE id_hh = h.id_hh
+                AND so_luong_con_lai > 0
+                AND hsd_lo >= NOW()
+                AND id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
+                ORDER BY hsd_lo ASC
+                LIMIT 1
+            )
             LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
             LEFT JOIN thoi_diem t ON g.id_td = t.id_td
             LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
-                AND km.trang_thai_km = 1
-                AND NOW() BETWEEN km.ngay_bd_km AND km.ngay_kt_km
-        ";
+                AND km.trang_thai_km = 0
+                AND NOW() BETWEEN km.ngay_bd_km AND km.ngay_kt_km";
     }
 
     public function getCartByUserId($id_tk) {
@@ -31,16 +36,23 @@ class CartModel extends BaseModel {
     public function getCartContentsForUser($id_gh) {
         $sql = "SELECT 
                     ct.id_hh, ct.so_luong,
-                    l.id_lo, -- BẮT BUỘC PHẢI THÊM CỘT NÀY
+                    l.id_lo,
                     h.ten_hh, h.link_anh,
                     g.gia_hien_tai,
-                    IFNULL(km.phan_tram_km, 0) as phan_tram_km
+                    IFNULL(km.phan_tram_km, 0) as phan_tram_km,
+                    -- Thêm dòng này:
+                    (SELECT SUM(sl.so_luong_con_lai) 
+                    FROM lo_hang sl 
+                    WHERE sl.id_hh = h.id_hh 
+                    AND sl.so_luong_con_lai > 0
+                    AND sl.hsd_lo >= NOW()
+                    AND sl.id_trang_thai_lo NOT IN ('TTL03','TTL05')
+                    ) as stock
                 FROM chi_tiet_gio_hang ct
                 INNER JOIN hang_hoa h ON ct.id_hh = h.id_hh
                 " . $this->getProductJoins() . "
                 WHERE ct.id_gh = ?
-                AND h.duoc_phep_ban = 1
-                GROUP BY ct.id_hh"; // Lưu ý: Nếu có nhiều lô, GROUP BY có thể gây sai lệch, nhưng tạm thời để thế này.
+                AND h.duoc_phep_ban = 1";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$id_gh]);
@@ -55,7 +67,8 @@ class CartModel extends BaseModel {
                 'price'            => $item['gia_hien_tai'],
                 'image'            => $item['link_anh'],
                 'quantity'         => $item['so_luong'],
-                'discount_percent' => $item['phan_tram_km']
+                'discount_percent' => $item['phan_tram_km'],
+                'stock'            => $item['stock'] ?? 0,
             ];
         }
         return $cartItems;
@@ -136,5 +149,17 @@ class CartModel extends BaseModel {
             error_log($e->getMessage());
             return false;
         }
+    }
+    public function getStockByProduct($id_hh) {
+        $stmt = $this->db->prepare("
+            SELECT COALESCE(SUM(so_luong_con_lai), 0) as stock
+            FROM lo_hang
+            WHERE id_hh = ?
+            AND so_luong_con_lai > 0
+            AND hsd_lo >= NOW()
+            AND id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
+        ");
+        $stmt->execute([$id_hh]);
+        return (int)$stmt->fetch(PDO::FETCH_ASSOC)['stock'];
     }
 }

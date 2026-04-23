@@ -72,7 +72,13 @@ require_once __DIR__ . '/../partials/header.php';
                                     <td class="cart-item-quantity">
                                         <div class="quantity-input-group">
                                             <button type="button" class="btn-quantity-change" data-id="<?php echo $item['id']; ?>" data-change="-1">−</button>
-                                            <input type="text" value="<?php echo $item['quantity']; ?>" class="quantity-field" data-id="<?php echo $item['id']; ?>" readonly>
+                                            <input type="number" 
+                                                value="<?php echo $item['quantity']; ?>" 
+                                                class="quantity-field" 
+                                                data-id="<?php echo $item['id']; ?>"
+                                                min="1" 
+                                                max="<?php echo $item['stock']; ?>"
+                                                data-max="<?php echo $item['stock']; ?>">
                                             <button type="button" class="btn-quantity-change" data-id="<?php echo $item['id']; ?>" data-change="1">+</button>
                                         </div>
                                     </td>
@@ -134,25 +140,10 @@ require_once __DIR__ . '/../partials/footer.php';
 ?>
 
 <script>
-// Tính tổng ngay khi load trang từ PHP data (không cần đọc DOM)
 document.addEventListener('DOMContentLoaded', function() {
-    let subtotal = 0;
-    let totalDiscount = 0;
-    
-    <?php foreach ($cartItems as $item): 
-        $price = (float)($item['price'] ?? 0);
-        $discount = (float)($item['discount_percent'] ?? 0);
-        $qty = (int)($item['quantity'] ?? 0);
-        $itemSubtotal = $price * $qty;
-        $itemDiscount = ($price * $discount / 100) * $qty;
-    ?>
-        subtotal += <?php echo $itemSubtotal; ?>;
-        totalDiscount += <?php echo $itemDiscount; ?>;
-    <?php endforeach; ?>
-    
-    let total = subtotal - totalDiscount;
-    document.querySelector('#cart-subtotal').textContent = subtotal.toLocaleString('vi-VN') + ' đ';
-    document.querySelector('#cart-discount').textContent = '-' + totalDiscount.toLocaleString('vi-VN') + ' đ';
-    document.querySelector('#cart-total').textContent = total.toLocaleString('vi-VN') + ' đ';
+    // Chỉ cần gọi hàm này khi trang vừa load. 
+    // Hàm này sẽ kiểm tra xem có checkbox nào được check không. 
+    // Nếu không, nó sẽ tự set về 0.
+    recalculateClientTotals(); 
 });
 </script>

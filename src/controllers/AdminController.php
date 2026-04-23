@@ -135,27 +135,34 @@ class AdminController extends BaseController {
 
     // QUẢN LÝ HÀNG HÓA
 
+    // ✅ Sửa lại
     public function products() {
         $productsPerPage = 20;
-        $currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $searchKeyword = $_GET['search'] ?? '';
-        $offset = ($currentPage - 1) * $productsPerPage;
-        
-        $totalProducts = $this->productModel->countAllProducts($searchKeyword);
-        $totalPages = ceil($totalProducts / $productsPerPage);
-        
-        // Model->getAllProducts() lúc này phải trả về SUM(so_luong_con_lai) và MIN(hsd_lo)
-        $products = $this->productModel->getAllProducts($searchKeyword, $productsPerPage, $offset);
+        $currentPage     = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $searchKeyword   = $_GET['keyword'] ?? '';      // ✅ đúng name trong form
+        $categoryId      = $_GET['category_id'] ?? '';  // ✅ thêm lọc danh mục
+        $offset          = ($currentPage - 1) * $productsPerPage;
+
+        $totalProducts = $this->productModel->countAllProducts($searchKeyword, $categoryId);
+        $totalPages    = ceil($totalProducts / $productsPerPage);
+
+        $products = $this->productModel->getAllProducts(
+            $searchKeyword,
+            $categoryId,       // ✅ truyền vào
+            $productsPerPage,
+            $offset
+        );
 
         $this->renderView('admin/products/index', [
-            'title' => 'Quản lý sản phẩm & Lô hàng',
-            'user' => Auth::user(),
-            'products' => $products,
-            'totalPages' => $totalPages,
-            'currentPage' => $currentPage,
+            'title'         => 'Quản lý sản phẩm & Lô hàng',
+            'user'          => Auth::user(),
+            'products'      => $products,
+            'categories'    => $this->categoryModel->getAllCategories(), // ✅ truyền ra view
+            'totalPages'    => $totalPages,
+            'currentPage'   => $currentPage,
             'searchKeyword' => $searchKeyword,
-            'success' => $_SESSION['success'] ?? null,
-            'error' => $_SESSION['error'] ?? null
+            'success'       => $_SESSION['success'] ?? null,
+            'error'         => $_SESSION['error'] ?? null
         ]);
         unset($_SESSION['success'], $_SESSION['error']);
     }
@@ -274,29 +281,36 @@ class AdminController extends BaseController {
      * API trả về danh sách các lô hàng còn tồn của một sản phẩm
      * Phục vụ cho việc hiển thị Modal chi tiết lô hàng
      */
+    // ✅ Sửa lại getBatches() trong AdminController
     public function getBatches() {
-        if (ob_get_length()) ob_clean(); 
-
+        if (ob_get_length()) ob_clean();
         $id_hh = $_GET['id_hh'] ?? '';
-        
+
         try {
             $batches = $this->productModel->getBatchesByProductId($id_hh);
-            
+
             foreach ($batches as &$b) {
-                $b['hsd_lo'] = date('d/m/Y', strtotime($b['hsd_lo']));
-                
-                // Cột này hiện tại trong SQL Model đã là 'ngay_lap_phieu_nhap'
-                $b['ngay_nhap_hien_thi'] = !empty($b['ngay_lap_phieu_nhap']) 
-                    ? date('d/m/Y', strtotime($b['ngay_lap_phieu_nhap'])) 
+                // ✅ Đặt tên key đúng với những gì JS đang đọc
+                $b['hsd_f']    = !empty($b['hsd_lo'])
+                    ? date('d/m/Y', strtotime($b['hsd_lo']))
+                    : '—';
+
+                $b['nhap_f']   = !empty($b['ngay_lap_phieu_nhap'])
+                    ? date('d/m/Y', strtotime($b['ngay_lap_phieu_nhap']))
                     : 'N/A';
-                
-                $b['color'] = 'success'; 
-                if ($b['id_trang_thai_lo'] == 'TTL02') $b['color'] = 'warning';
-                if ($b['id_trang_thai_lo'] == 'TTL03') $b['color'] = 'danger';
-                if ($b['id_trang_thai_lo'] == 'TTL04') $b['color'] = 'secondary';
-                
-                // Thêm dòng này để JS không bị lỗi nếu bạn dùng 'ten_trang_thai' ở giao diện
-                $b['ten_trang_thai'] = $b['ten_trang_thai_lo'] ?? ''; 
+
+                $b['ten_tt_f'] = $b['ten_trang_thai_lo'] ?? 'N/A';
+                $b['ten_km_f'] = $b['ten_km'] ?? 'Không';
+
+                // Badge màu theo trạng thái
+                $b['badge_class'] = match($b['id_trang_thai_lo'] ?? '') {
+                    'TTL01' => 'bg-success',
+                    'TTL02' => 'bg-warning text-dark',
+                    'TTL03' => 'bg-danger',
+                    'TTL04' => 'bg-secondary',
+                    'TTL05' => 'bg-dark',
+                    default => 'bg-secondary'
+                };
             }
 
             header('Content-Type: application/json');
@@ -705,7 +719,12 @@ class AdminController extends BaseController {
         echo '</tbody></table>';
     }
 
+    // =============================
+    // DANH SÁCH SẢN PHẨM
+    // =============================
     public function inventories() {
+        // Tự động cập nhật trạng thái lô trước khi hiển thị
+        $this->inventoryModel->autoUpdateLotStatus();
         $products = $this->inventoryModel->getAllProducts();
 
         $this->renderView('admin/inventories/index', [
@@ -718,6 +737,9 @@ class AdminController extends BaseController {
         unset($_SESSION['success'], $_SESSION['error']);
     }
 
+    // =============================
+    // FORM NHẬP LÔ
+    // =============================
     public function createInventory() {
         $id_hh = $_GET['id_hh'] ?? '';
         if (empty($id_hh)) {
@@ -750,6 +772,9 @@ class AdminController extends BaseController {
         unset($_SESSION['success'], $_SESSION['error']);
     }
 
+    // =============================
+    // LƯU LÔ MỚI
+    // =============================
     public function storeInventory() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/admin/inventories');
@@ -768,18 +793,24 @@ class AdminController extends BaseController {
         $result = $this->inventoryModel->createLot($id_hh, $data);
 
         if ($result) {
-            // TỰ ĐỘNG CẬP NHẬT GIÁ BÁN TỪ GIÁ VỐN BÌNH QUÂN
+            // ✅ Cập nhật giá bán theo WAC
             $this->inventoryModel->updatePriceForProduct($id_hh);
-            
-            $_SESSION['success'] = "Nhập lô hàng mới thành công! Giá bán đã được cập nhật theo giá vốn mới.";
+
+            $_SESSION['success'] = "Nhập lô hàng mới thành công! Giá bán đã được cập nhật.";
         } else {
-            $_SESSION['error'] = "Lỗi khi nhập lô hàng! Vui lòng kiểm tra lại dữ liệu.";
+            $_SESSION['error'] = "Lỗi khi nhập lô hàng!";
         }
+
         $this->redirect('/admin/inventories/create?id_hh=' . $id_hh);
     }
 
-    // Chi tiết sản phẩm + lô
+    // =============================
+    // CHI TIẾT SẢN PHẨM
+    // =============================
     public function inventoryDetail($id) {
+         // Tự động cập nhật trạng thái lô trước khi hiển thị
+        $this->inventoryModel->autoUpdateLotStatus();
+
         $lots    = $this->inventoryModel->getLotsByProduct($id);
         $product = $this->productModel->getProductByIdForAdmin($id);
 
@@ -791,11 +822,13 @@ class AdminController extends BaseController {
         ]);
     }
 
-    // JSON cho modal
+    // =============================
+    // JSON CHO MODAL
+    // =============================
     public function getBatchesJson() {
         if (ob_get_length()) ob_clean();
         error_reporting(0);
-        
+
         $id_hh   = $_GET['id_hh'] ?? '';
         $batches = $this->inventoryModel->getBatchesByProductId($id_hh);
 
@@ -813,11 +846,9 @@ class AdminController extends BaseController {
             $b['nhap_f']      = !empty($b['ngay_lap_phieu_nhap'])
                                 ? date('d/m/Y', strtotime($b['ngay_lap_phieu_nhap']))
                                 : '—';
-            
-            // Dữ liệu bổ sung
-            $b['ten_tt_f']    = $b['ten_trang_thai_lo'] ?? 'N/A';
-            $b['ten_km_f']    = $b['ten_km'] ?? 'Không';
-            
+
+            $b['ten_tt_f'] = $b['ten_trang_thai_lo'] ?? 'N/A';
+            $b['ten_km_f'] = $b['ten_km'] ?? 'Không';
             $b['gia_canh_bao'] = (isset($b['gia_hien_tai']) && (float)$b['gia_hien_tai'] === 0.0);
         }
 
@@ -826,7 +857,9 @@ class AdminController extends BaseController {
         exit;
     }
 
-    // Cập nhật lô
+    // =============================
+    // CẬP NHẬT LÔ
+    // =============================
     public function updateBatch() {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect('/admin/inventories');
@@ -841,7 +874,7 @@ class AdminController extends BaseController {
         ];
 
         if (empty($id_lo)) {
-            $_SESSION['error'] = "Không tìm thấy mã lô hàng!";
+            $_SESSION['error'] = "Không tìm thấy mã lô!";
             $this->redirect('/admin/inventories');
             return;
         }
@@ -849,15 +882,28 @@ class AdminController extends BaseController {
         $result = $this->inventoryModel->updateLotInfo($id_lo, $data);
 
         if ($result) {
-            $_SESSION['success'] = "Cập nhật lô hàng $id_lo thành công!";
-        } else {
-            $_SESSION['error'] = "Có lỗi xảy ra khi cập nhật dữ liệu.";
-        }
+            // ✅ Lấy id_hh và cập nhật lại giá
+            $lotInfo = $this->inventoryModel->getLotById($id_lo);
+            if ($lotInfo) {
+                $this->inventoryModel->updatePriceForProduct($lotInfo['id_hh']);
+            }
 
-        $this->redirect($_SERVER['HTTP_REFERER'] ?? '/admin/inventories');
+            $_SESSION['success'] = "Cập nhật lô $id_lo thành công!";
+        } else {
+            $_SESSION['error'] = "Lỗi khi cập nhật!";
+        }
+        // MỚI - redirect về detail của sản phẩm đó
+        $id_hh = $_POST['id_hh'] ?? '';
+        if (!empty($id_hh)) {
+            $this->redirect('/admin/inventories/detail/' . $id_hh);
+        } else {
+            $this->redirect('/admin/inventories');
+        }
     }
 
-    // Xóa lô
+    // =============================
+    // XÓA LÔ
+    // =============================
     public function deleteBatch() {
         $id_lo = $_GET['id_lo'] ?? '';
         $id_hh = $_GET['id_hh'] ?? '';
@@ -869,9 +915,15 @@ class AdminController extends BaseController {
         }
 
         if ($this->inventoryModel->deleteLot($id_lo)) {
-            $_SESSION['success'] = "Đã xóa lô hàng $id_lo thành công.";
+
+            // ✅ Cập nhật lại giá sau khi xóa
+            if (!empty($id_hh)) {
+                $this->inventoryModel->updatePriceForProduct($id_hh);
+            }
+
+            $_SESSION['success'] = "Đã xóa lô $id_lo thành công.";
         } else {
-            $_SESSION['error'] = "Lỗi: Không thể xóa lô này.";
+            $_SESSION['error'] = "Không thể xóa lô.";
         }
 
         if (!empty($id_hh)) {
@@ -955,7 +1007,7 @@ class AdminController extends BaseController {
             ];
 
             if (!empty($id)) {
-                // Trường hợp Cập nhật
+                // Trường hợp  nhật
                 $result = $this->supplierModel->updateSupplier($id, $data);
                 $msg = "Cập nhật";
             } else {
@@ -1103,7 +1155,16 @@ class AdminController extends BaseController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Lấy dữ liệu
             $id = $_POST['id_dh'] ?? '';
-            $status = $_POST['trang_thai'] ?? '';
+            $tenTrangThai = $_POST['trang_thai'] ?? '';
+
+            $map = [
+                'Chờ xử lý'            => 'TTD01',
+                'Đã xác nhận'          => 'TTD02',
+                'Đang giao hàng'       => 'TTD03',
+                'Giao hàng thành công' => 'TTD04',
+                'Đã hủy'               => 'TTD05',
+            ];
+            $status = $map[$tenTrangThai] ?? null;
 
             if (empty($id) || empty($status)) {
                 $_SESSION['error'] = 'Dữ liệu không hợp lệ!';

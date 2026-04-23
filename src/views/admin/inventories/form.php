@@ -1,26 +1,26 @@
 <?php 
-// 1. Tính toán giá vốn bình quân
-$total_quantity = 0;
-$total_value = 0;
-$average_cost = 0;
-
-// % lợi nhuận (mặc định 30%)
-$margin = (float)($product['phan_tram_loi_nhuan'] ?? 30);
+// SỬA LẠI LOGIC TÍNH WAC
+$total_qty_remain = 0; // Thay đổi từ total_qty_nhap
+$total_value      = 0;
+$average_cost     = 0;
 
 if (!empty($lots)) {
     foreach ($lots as $lot) {
-        $qty = $lot['so_luong_con_lai'] ?? 0;
-        $price = $lot['gia_von_nhap'] ?? 0;
-        $total_quantity += $qty;
-        $total_value += ($qty * $price);
+        $qty_remain = (float)($lot['so_luong_con_lai'] ?? 0);
+        if ($qty_remain <= 0) continue;
+
+        $price = (float)($lot['gia_von_nhap'] ?? 0);
+
+        $total_qty_remain += $qty_remain;
+        $total_value      += ($qty_remain * $price); // Giá trị tồn kho hiện tại
     }
 
-    if ($total_quantity > 0) {
-        $average_cost = $total_value / $total_quantity;
+    if ($total_qty_remain > 0) {
+        $average_cost = $total_value / $total_qty_remain;
     }
 }
 
-// 2. Giá bán dự kiến (Giá vốn bình quân * % lợi nhuận)
+// Giá bán dự kiến
 $suggested_price = $average_cost * (1 + ($margin / 100));
 ?>
 
@@ -30,12 +30,16 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
 <main class="app-main">
     <div class="app-content">
         <div class="container-fluid">
+
             <?php if (!empty($success)): ?>
                 <div class="alert alert-success mt-3"><?= $success ?></div>
             <?php endif; ?>
 
+            <!-- ===== THÔNG TIN SẢN PHẨM ===== -->
             <div class="card card-outline card-info mb-3 mt-3">
-                <div class="card-header"><h3 class="card-title">Thông tin sản phẩm</h3></div>
+                <div class="card-header">
+                    <h3 class="card-title">Thông tin sản phẩm</h3>
+                </div>
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-md-2 text-center">
@@ -46,106 +50,162 @@ $suggested_price = $average_cost * (1 + ($margin / 100));
                             ?>
                             <img src="<?= $imgSrc ?>" class="img-thumbnail shadow-sm" style="max-height:120px;object-fit:contain;">
                         </div>
+
                         <div class="col-md-10">
                             <div class="row">
-                                <div class="col-sm-4"><p class="text-muted small mb-1">Mã sản phẩm</p><p class="fw-bold"><?= $product['id_hh'] ?></p></div>
-                                <div class="col-sm-4"><p class="text-muted small mb-1">Tên sản phẩm</p><p class="fw-bold"><?= htmlspecialchars($product['ten_hh']) ?></p></div>
-                                <div class="col-sm-4"><p class="text-muted small mb-1">Danh mục</p><p class="fw-bold"><?= htmlspecialchars($product['ten_loai'] ?? 'Chưa phân loại') ?></p></div>
+                                <div class="col-sm-4">
+                                    <p class="text-muted small mb-1">Mã sản phẩm</p>
+                                    <p class="fw-bold"><?= $product['id_hh'] ?></p>
+                                </div>
+
+                                <div class="col-sm-4">
+                                    <p class="text-muted small mb-1">Tên sản phẩm</p>
+                                    <p class="fw-bold"><?= htmlspecialchars($product['ten_hh']) ?></p>
+                                </div>
+
+                                <div class="col-sm-4">
+                                    <p class="text-muted small mb-1">Danh mục</p>
+                                    <p class="fw-bold"><?= htmlspecialchars($product['ten_loai'] ?? 'Chưa phân loại') ?></p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- ===== FORM NHẬP LÔ ===== -->
             <div class="card card-outline card-primary mb-3">
-                <div class="card-header"><h3 class="card-title">Thêm lô hàng mới</h3></div>
+                <div class="card-header">
+                    <h3 class="card-title">Thêm lô hàng mới</h3>
+                </div>
+
                 <div class="card-body">
                     <form action="<?= BASE_PATH ?>/admin/inventories/store" method="POST">
                         <input type="hidden" name="id_hh" value="<?= $product['id_hh'] ?>">
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Nhà cung cấp *</label>
                                 <select name="id_ncc" class="form-select" required>
                                     <option value="">-- Chọn NCC --</option>
                                     <?php foreach ($suppliers as $s): ?>
-                                        <option value="<?= $s['id_ncc'] ?>"><?= htmlspecialchars($s['ten_ncc']) ?></option>
+                                        <option value="<?= $s['id_ncc'] ?>">
+                                            <?= htmlspecialchars($s['ten_ncc']) ?>
+                                        </option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Khuyến mãi</label>
                                 <select name="id_km" class="form-select">
                                     <option value="">-- Không có --</option>
                                     <?php foreach ($promotions as $km): ?>
-                                        <option value="<?= $km['id_km'] ?>"><?= htmlspecialchars($km['ten_km']) ?> (<?= $km['phan_tram_km'] ?>%)</option>
+                                        <option value="<?= $km['id_km'] ?>">
+                                            <?= htmlspecialchars($km['ten_km']) ?> (<?= $km['phan_tram_km'] ?>%)
+                                        </option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+
                             <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">Hạn sử dụng *</label>
                                 <input type="datetime-local" name="hsd_lo" class="form-control" required>
                             </div>
+
                             <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">Số lượng *</label>
                                 <input type="number" name="so_luong" class="form-control" min="1" required>
                             </div>
+
                             <div class="col-md-4 mb-3">
                                 <label class="form-label fw-bold">Giá vốn *</label>
                                 <input type="number" name="don_gia" class="form-control" min="0" required>
                             </div>
                         </div>
-                        <div class="text-end"><button class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nhập lô</button></div>
+
+                        <div class="text-end">
+                            <button class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Nhập lô
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
 
+            <!-- ===== DANH SÁCH LÔ ===== -->
             <div class="card card-outline card-secondary shadow-sm">
+
                 <div class="card-header d-flex flex-column bg-light">
                     <div class="d-flex justify-content-between align-items-center w-100">
                         <h3 class="card-title fw-bold">Các lô hàng hiện có trong kho</h3>
                     </div>
+
                     <div class="d-flex gap-3 mt-2">
-                        <span class="text-dark fw-bold"><i class="bi bi-calculator"></i> Giá vốn bình quân: <?= number_format($average_cost, 0, ',', '.') ?>đ</span>
-                        <span class="text-success fw-bold"><i class="bi bi-tag"></i> Giá bán dự kiến: <?= number_format($suggested_price, 0, ',', '.') ?>đ</span>
+                        <span class="text-dark fw-bold">
+                            <i class="bi bi-calculator"></i> 
+                            Giá vốn bình quân: <?= number_format($average_cost, 0, ',', '.') ?>đ
+                        </span>
+
+                        <span class="text-success fw-bold">
+                            <i class="bi bi-tag"></i> 
+                            Giá bán dự kiến: <?= number_format($suggested_price, 0, ',', '.') ?>đ
+                        </span>
                     </div>
                 </div>
 
                 <div class="card-body">
                     <table class="table table-bordered table-hover text-center align-middle">
+                        
+                        <!-- THEAD ĐÃ SỬA -->
                         <thead class="table-dark">
                             <tr>
                                 <th>Mã lô</th>
                                 <th>HSD</th>
                                 <th>Tồn</th>
                                 <th>Giá vốn</th>
-                                <th>Giá sau KM</th>
                                 <th>Khuyến mãi</th>
                                 <th>Trạng thái</th>
                             </tr>
                         </thead>
+
+                        <!-- TBODY ĐÃ SỬA -->
                         <tbody>
-                        <?php if (!empty($lots)): foreach ($lots as $lot):
-                            $gia = $lot['gia_hien_tai'] ?? 0;
-                            $km = $lot['phan_tram_km'] ?? 0;
-                            $gia_km = $gia * (1 - $km / 100);
-                        ?>
+                        <?php if (!empty($lots)): foreach ($lots as $lot): ?>
                         <tr>
                             <td><?= $lot['id_lo'] ?></td>
                             <td><?= date('d/m/Y', strtotime($lot['hsd_lo'])) ?></td>
                             <td class="fw-bold text-primary"><?= number_format($lot['so_luong_con_lai']) ?></td>
                             <td><?= number_format($lot['gia_von_nhap'], 0, ',', '.') ?>đ</td>
-                            <td class="text-danger fw-bold"><?= number_format($gia_km, 0, ',', '.') ?>đ</td>
-                            <td><?= $lot['ten_km'] ? '<span class="text-danger">-' . $km . '%</span>' : '—' ?></td>
-                            <td><span class="badge bg-success"><?= $lot['ten_trang_thai_lo'] ?></span></td>
+
+                            <td>
+                                <?= $lot['ten_km'] 
+                                    ? '<span class="badge bg-warning text-dark">-' . $lot['phan_tram_km'] . '%</span>' 
+                                    : '—' ?>
+                            </td>
+
+                            <td>
+                                <span class="badge bg-success">
+                                    <?= $lot['ten_trang_thai_lo'] ?>
+                                </span>
+                            </td>
                         </tr>
+
                         <?php endforeach; else: ?>
-                            <tr><td colspan="7" class="text-center text-muted py-4">Chưa có lô hàng</td></tr>
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    Chưa có lô hàng
+                                </td>
+                            </tr>
                         <?php endif; ?>
                         </tbody>
+
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 </main>
+
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

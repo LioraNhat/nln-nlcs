@@ -148,9 +148,19 @@
 <div class="modal fade" id="modalBatchList" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content shadow-lg">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Chi tiết lô: <span id="modal-product-name"></span></h5>
-                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-primary text-white d-flex flex-column align-items-start">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <h5 class="modal-title">Chi tiết lô: <span id="modal-product-name"></span></h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="d-flex gap-3 mt-2">
+                    <span class="fw-bold text-white">
+                        <i class="bi bi-calculator"></i> Giá vốn bình quân: <span id="modal-avg-cost">—</span>
+                    </span>
+                    <span class="fw-bold text-warning">
+                        <i class="bi bi-tag"></i> Giá bán dự kiến: <span id="modal-suggested-price">—</span>
+                    </span>
+                </div>
             </div>
             <div class="modal-body p-0">
                 <div class="table-responsive">
@@ -158,20 +168,16 @@
                         <thead class="table-dark text-center">
                             <tr>
                                 <th>Mã lô</th>
-                                <th>Ngày nhập</th>
-                                <th>Nhà cung cấp</th>
                                 <th>HSD</th>
-                                <th>SL nhập</th>
                                 <th>Tồn</th>
                                 <th>Giá vốn</th>
-                                <th>Giá bán</th>
                                 <th>Khuyến mãi</th>
                                 <th>Trạng thái</th>
                                 <th>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="batch-list-body">
-                            <tr><td colspan="11" class="text-center text-muted py-3">Đang tải...</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted py-3">Đang tải...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -191,6 +197,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="id_lo" id="input-id-lo">
+                    <input type="hidden" name="id_hh" id="input-id-hh">
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Hạn sử dụng</label>
@@ -224,10 +231,10 @@
 
 <script>
 // ✅ Hàm openEditModal dùng chung cho cả Index và Detail
-function openEditModal(idLo, hsdLo, stock, status) {
+function openEditModal(idLo, hsdLo, stock, status, idHh) {
     document.getElementById('display-id-lo').innerText = idLo;
     document.getElementById('input-id-lo').value        = idLo;
-    // Chuẩn hóa định dạng datetime-local (YYYY-MM-DDTHH:MM)
+    document.getElementById('input-id-hh').value        = idHh ?? '';  // ← thêm
     const hsdFormatted = hsdLo.replace(' ', 'T').substring(0, 16);
     document.getElementById('input-hsd').value    = hsdFormatted;
     document.getElementById('input-stock').value  = stock;
@@ -250,44 +257,59 @@ document.querySelectorAll('.btn-view-batches').forEach(btn => {
             .then(res => res.json())
             .then(data => {
                 if (!data.length) {
-                    tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-3">Chưa có lô hàng nào.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Chưa có lô hàng nào.</td></tr>';
+                    document.getElementById('modal-avg-cost').innerText = '—';
+                    document.getElementById('modal-suggested-price').innerText = '—';
                     return;
                 }
 
+                // Tính WAC: Σ(so_luong_nhap × gia_von_nhap) / Σ(so_luong_nhap) — chỉ lô còn tồn
+                let totalQty = 0, totalValue = 0, margin = 30;
+                data.forEach(item => {
+                    if (item.so_luong_con_lai > 0) {
+                        const qty = parseFloat(item.so_luong_nhap) || 0;
+                        const price = parseFloat(item.gia_von_nhap) || 0;
+                        totalQty  += qty;
+                        totalValue += qty * price;
+                    }
+                    // Lấy margin từ item nếu có (cần trả về từ API)
+                    if (item.phan_tram_loi_nhuan) margin = parseFloat(item.phan_tram_loi_nhuan);
+                });
+
+                const avgCost = totalQty > 0 ? totalValue / totalQty : 0;
+                const suggestedPrice = avgCost * (1 + margin / 100);
+
+                document.getElementById('modal-avg-cost').innerText =
+                    avgCost.toLocaleString('vi-VN', {maximumFractionDigits: 0}) + 'đ';
+                document.getElementById('modal-suggested-price').innerText =
+                    suggestedPrice.toLocaleString('vi-VN', {maximumFractionDigits: 0}) + 'đ';
+
+                const badgeMap = {
+                    TTL01: 'bg-success', TTL02: 'bg-warning text-dark',
+                    TTL03: 'bg-secondary', TTL04: 'bg-danger', TTL05: 'bg-dark'
+                };
+
                 let html = '';
                 data.forEach(item => {
-                    // ✅ Hiển thị cảnh báo nếu giá = 0
-                    let giaBanHtml = '';
-                    if (item.gia_canh_bao) {
-                        giaBanHtml = `<span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill"></i> 0đ - Cần cập nhật</span>`;
-                    } else if (item.gia_hien_tai === null || item.gia_hien_tai === undefined) {
-                        giaBanHtml = `<span class="text-muted">Chưa có giá</span>`;
-                    } else {
-                        giaBanHtml = `<strong class="text-success">${Number(item.gia_hien_tai).toLocaleString('vi-VN')}đ</strong>`;
-                    }
-
+                    const badgeCls = badgeMap[item.id_trang_thai_lo] ?? 'bg-light';
                     const kmHtml = item.ten_km
-                        ? `<span class="badge bg-warning text-dark">${item.ten_km} (-${item.phan_tram_km}%)</span>`
-                        : '<span class="text-muted">—</span>';
+                        ? `<span class="badge bg-warning text-dark">-${item.phan_tram_km}%</span>`
+                        : '—';
 
                     html += `
                         <tr class="text-center">
                             <td><code>${item.id_lo}</code></td>
-                            <td>${item.nhap_f}</td>
-                            <td class="text-start">${item.ten_ncc ?? '—'}</td>
                             <td>${item.hsd_f}</td>
-                            <td>${Number(item.so_luong_nhap).toLocaleString('vi-VN')}</td>
                             <td class="fw-bold ${item.so_luong_con_lai <= 5 ? 'text-danger' : 'text-primary'}">
                                 ${Number(item.so_luong_con_lai).toLocaleString('vi-VN')}
                             </td>
                             <td>${item.gia_von_nhap ? Number(item.gia_von_nhap).toLocaleString('vi-VN') + 'đ' : '—'}</td>
-                            <td>${giaBanHtml}</td>
                             <td>${kmHtml}</td>
-                            <td><span class="badge ${item.badge_class}">${item.ten_trang_thai_lo}</span></td>
+                            <td><span class="badge ${badgeCls}">${item.ten_trang_thai_lo}</span></td>
                             <td>
                                 <div class="btn-group">
                                     <button class="btn btn-xs btn-warning"
-                                        onclick="openEditModal('${item.id_lo}', '${item.hsd_lo}', ${item.so_luong_con_lai}, '${item.id_trang_thai_lo}')">
+                                        onclick="openEditModal('${item.id_lo}', '${item.hsd_lo}', ${item.so_luong_con_lai}, '${item.id_trang_thai_lo}', '${idHH}')"
                                         <i class="bi bi-pencil"></i> Sửa
                                     </button>
                                     <a href="<?= BASE_PATH ?>/admin/inventories/delete-batch?id_lo=${item.id_lo}&id_hh=${idHH}"
@@ -302,7 +324,7 @@ document.querySelectorAll('.btn-view-batches').forEach(btn => {
                 tbody.innerHTML = html;
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-3">Lỗi khi tải dữ liệu.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Lỗi khi tải dữ liệu.</td></tr>';
             });
     });
 });

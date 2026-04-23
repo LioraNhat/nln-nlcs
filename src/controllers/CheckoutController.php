@@ -46,9 +46,9 @@ class CheckoutController extends BaseController {
 
         $total = $subtotal - $totalDiscount;
         return [
-            'subtotal' => $subtotal,
+            'subtotal'      => $subtotal,
             'totalDiscount' => $totalDiscount,
-            'total' => $total
+            'total'         => $total
         ];
     }
 
@@ -115,22 +115,24 @@ class CheckoutController extends BaseController {
 
         $userId = Auth::id();
         $cartItems = $_SESSION['cart_for_checkout'] ?? [];
+
         if (empty($cartItems)) {
             $this->redirect('/cart/index');
             return;
         }
+
         $id_pttt = $_POST['payment_method_id']; 
         $selected_address_id = $_POST['selected_address_id']; 
         $address = $this->addressModel->findAddressById($userId, $selected_address_id);
-        
+
         if (!$address) {
             $this->redirect('/checkout/index'); 
             return;
         }
-        $formattedAddress = $this->formatAddressString($address);
-        $totals = $this->calculateCartTotals($cartItems);
 
+        $totals = $this->calculateCartTotals($cartItems);
         $newOrderId = $this->orderModel->generateNewOrderId(); 
+        
         $data = [
             'id_dh'                 => $newOrderId,
             'id_pttt'               => $id_pttt,
@@ -139,18 +141,36 @@ class CheckoutController extends BaseController {
             'tong_gia_tri_don'      => $totals['subtotal'],
             'tien_giam_gia'         => $totals['totalDiscount'],
             'thanh_tien'            => $totals['total'],
-            'trang_thai_thanh_toan' => ($id_pttt == 'PTTT1') ? 0 : 1 // 0: Chưa thanh toán, 1: Đã thanh toán
+            'trang_thai_thanh_toan' => ($id_pttt == 'PTTT1') ? 0 : 1 
         ];
 
         try {
             $this->orderModel->createOrder($data);
-            $this->orderModel->addOrderDetails($newOrderId, $cartItems);
+            
+            if (!$this->orderModel->addOrderDetails($newOrderId, $cartItems)) {
+                throw new \Exception("Lỗi khi lưu chi tiết đơn hàng.");
+            }
+
             $this->orderModel->createInitialOrderStatus($newOrderId);
+            
             $userCartId = Auth::cartId();
             foreach ($cartItems as $id => $item) {
                 $this->cartModel->removeProductForUser($userCartId, $id);
             }
+
+            // --- ĐÂY LÀ PHẦN SỬA QUAN TRỌNG ---
             unset($_SESSION['cart_for_checkout']); 
+            
+            // Xóa session giỏ hàng để Header cập nhật
+            $_SESSION['cart'] = []; 
+            
+            // QUAN TRỌNG: Phải set cart_count về 0 vì header.php đang đọc biến này
+            $_SESSION['cart_count'] = 0; 
+            
+            // Ghi dữ liệu session xuống ngay để redirect không bị mất
+            session_write_close();
+            // ----------------------------------
+
             $_SESSION['last_order_id'] = $newOrderId; 
             $this->redirect('/checkout/success');
 
@@ -166,12 +186,12 @@ class CheckoutController extends BaseController {
     private function formatAddressString($address) {
         return sprintf(
             "%s (%s)\nĐịa chỉ: %s, %s, %s, %s",
-            $address['TEN_NGUOI_NHAN'],
-            $address['SDT_GH'],
-            $address['DIA_CHI_CHI_TIET'],
-            $address['TEN_XA_PHUONG'],
-            $address['TEN_QUAN_HUYEN'],
-            $address['TEN_TINH_TP']
+            $address['ten_nguoi_nhan'],
+            $address['sdt_gh'],
+            $address['dia_chi_chi_tiet'],
+            $address['ten_xa_phuong'],
+            $address['ten_quan_huyen'],
+            $address['ten_tinh_tp']
         );
     }
 

@@ -93,15 +93,14 @@ class ProductController extends BaseController {
 
         $products = $this->productModel->getProductsByProductType($id_lhh, $filters);
 
-        // SỬA TẠI ĐÂY: Sử dụng key chữ thường id_dm theo CSDL mới
-        $parentId = $typeInfo['id_dm'] ?? $typeInfo['id_dm'] ?? null;
+        $parentId = $typeInfo['id_dm'] ?? null; // ✅
         $subCategories = $this->categoryModel->getProductTypesByCategoryId($parentId);
 
         $data = [
             'products' => $products,
             'currentCategory' => [ 
-                'TEN_DM' => $typeInfo['ten_dm'] ?? $typeInfo['TEN_DM'] ?? '',
-                'ID_DM' => $parentId
+                'ten_dm' => $typeInfo['ten_dm'] ?? '',  // ✅ chữ thường
+                'id_dm' => $parentId
             ],
             'subCategories' => $subCategories, 
             'filters' => $filters

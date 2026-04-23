@@ -115,6 +115,18 @@ class CartController extends BaseController {
 
         if (Auth::isLoggedIn()) {
             $userCartId = Auth::cartId();
+
+            $stock = $this->cartModel->getStockByProduct($id_hh);
+            if ($quantity > $stock) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => "Chỉ còn $stock sản phẩm trong kho",
+                    'max_stock' => $stock
+                ]);
+                exit;
+            }
+
             $this->cartModel->updateProductForUser($userCartId, $id_hh, $quantity);
             $totalCount = $this->cartModel->getCartItemCountForUser($userCartId);
             $cartItems = $this->cartModel->getCartContentsForUser($userCartId);
@@ -144,29 +156,38 @@ class CartController extends BaseController {
      * HÀM REMOVE (Đã sửa)
      */
     public function remove($id_hh = null) {
-        // Lấy từ tham số hoặc từ URL
         if (!$id_hh) {
             $uri = $_SERVER['REQUEST_URI'];
             $parts = explode('/', $uri);
             $id_hh = end($parts);
+        }
+
+        $cartItems = [];
+        $totalCount = 0;
+
+        if (Auth::isLoggedIn()) {
+            $userCartId = Auth::cartId();
+            $this->cartModel->removeProductForUser($userCartId, $id_hh);
+            $totalCount = $this->cartModel->getCartItemCountForUser($userCartId);
+            $cartItems = $this->cartModel->getCartContentsForUser($userCartId);
         } else {
             unset($_SESSION['cart'][$id_hh]);
             $cartItems = $_SESSION['cart'] ?? [];
             $totalCount = $this->cartModel->getSessionItemCount($cartItems);
         }
-        
-        // ===============================================
-        // SỬA LỖI: Lưu vào Session
-        // ===============================================
+
         $_SESSION['cart_count'] = $totalCount;
-        // ===============================================
 
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])) {
             $totals = $this->calculateCartTotals($cartItems);
             header('Content-Type: application/json');
             echo json_encode([
-                'success' => true, 'cartCount' => $totalCount,
-                // ... (phần còn lại giữ nguyên) ...
+                'success'       => true,
+                'cartCount'     => $totalCount,
+                'subtotal'      => $totals['subtotal'],
+                'totalDiscount' => $totals['totalDiscount'],
+                'total'         => $totals['total'],
+                'items'         => array_values($cartItems)
             ]);
             exit;
         }

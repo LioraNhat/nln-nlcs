@@ -31,3 +31,12 @@ require_once __DIR__ . '/../partials/header.php';
 <?php 
 require_once __DIR__ . '/../partials/footer.php'; 
 ?>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Gọi hàm update đã tạo ở bước trước để ép Header về 0
+    if (typeof updateHeaderCartCount === 'function') {
+        updateHeaderCartCount(0);
+    }
+});
+</script>

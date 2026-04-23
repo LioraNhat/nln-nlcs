@@ -9,13 +9,43 @@ require_once __DIR__ . '/../layouts/sidebar.php';
             <div class="card card-outline card-primary">
                 <div class="card-header">
                     <h3 class="card-title">Danh sách Hàng hóa</h3>
+                    
                     <div class="card-tools">
                         <a href="<?php echo BASE_PATH; ?>/admin/products/create" class="btn btn-primary btn-sm">+ Thêm mới</a>
                     </div>
+                    <form action="<?php echo BASE_PATH; ?>/admin/products/index" method="GET" class="d-flex card-tools gap-2">
+                        <select name="category_id" class="form-control form-control-sm">
+                            <option value="">Tất cả danh mục</option>
+                            <?php foreach($categories as $cat): ?>
+                                <option value="<?php echo $cat['id_dm']; ?>" <?php echo (isset($_GET['category_id']) && $_GET['category_id'] == $cat['id_dm']) ? 'selected' : ''; ?>>
+                                    <?php echo $cat['ten_dm']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <input type="text" name="keyword" class="form-control form-control-sm" placeholder="Tìm theo tên..." value="<?php echo htmlspecialchars($_GET['keyword'] ?? ''); ?>">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+                    
+                    </form>
                 </div>
                 
                 <div class="card-body">
                     <div class="table-responsive">
+                        <?php if ($totalPages > 1): ?>
+                        <div class="d-flex justify-content-center mt-3">
+                            <nav>
+                                <ul class="pagination pagination-sm">
+                                    <?php for ($p = 1; $p <= $totalPages; $p++): ?>
+                                        <li class="page-item <?= $p == $currentPage ? 'active' : '' ?>">
+                                            <a class="page-link" href="?page=<?= $p ?>
+                                                <?= !empty($searchKeyword) ? '&keyword='.urlencode($searchKeyword) : '' ?>
+                                                <?= !empty($_GET['category_id']) ? '&category_id='.urlencode($_GET['category_id']) : '' ?>
+                                            "><?= $p ?></a>
+                                        </li>
+                                    <?php endfor; ?>
+                                </ul>
+                            </nav>
+                        </div>
+                        <?php endif; ?>
                         <table class="table table-bordered table-striped table-hover align-middle">
                             <thead>
                                 <tr class="text-center">

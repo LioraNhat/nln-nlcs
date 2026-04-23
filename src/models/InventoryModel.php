@@ -33,26 +33,45 @@ class InventoryModel extends BaseModel {
 
     // Lấy danh sách lô cho AJAX (modal trang Index)
     public function getBatchesByProductId($id_hh) {
-        $sql = "SELECT l.*, ttl.ten_trang_thai_lo,
+        $sql = "SELECT l.*, 
+                    ttl.ten_trang_thai_lo,
                     g.gia_hien_tai,
                     km.ten_km, km.phan_tram_km,
                     pn.ngay_lap_phieu_nhap,
-                    ncc.ten_ncc
+                    ncc.ten_ncc,
+                    h.phan_tram_loi_nhuan
                 FROM lo_hang l
-                JOIN trang_thai_lo_hang ttl ON l.id_trang_thai_lo = ttl.id_trang_thai_lo
-                LEFT JOIN gia_ban_hien_tai g ON l.id_lo = g.id_lo
+
+                -- ✅ JOIN thêm bảng hàng hóa để lấy % lợi nhuận
+                JOIN hang_hoa h ON l.id_hh = h.id_hh
+
+                JOIN trang_thai_lo_hang ttl 
+                    ON l.id_trang_thai_lo = ttl.id_trang_thai_lo
+
+                LEFT JOIN gia_ban_hien_tai g 
+                    ON l.id_lo = g.id_lo
                     AND g.id_td = (
-                        SELECT id_td FROM thoi_diem 
+                        SELECT id_td 
+                        FROM thoi_diem 
                         WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban 
                         LIMIT 1
                     )
-                LEFT JOIN khuyen_mai km ON l.id_km = km.id_km
-                LEFT JOIN phieu_nhap pn ON l.id_pn = pn.id_pn
-                LEFT JOIN nha_cung_cap ncc ON pn.id_ncc = ncc.id_ncc
+
+                LEFT JOIN khuyen_mai km 
+                    ON l.id_km = km.id_km
+
+                LEFT JOIN phieu_nhap pn 
+                    ON l.id_pn = pn.id_pn
+
+                LEFT JOIN nha_cung_cap ncc 
+                    ON pn.id_ncc = ncc.id_ncc
+
                 WHERE l.id_hh = :id_hh
                 ORDER BY l.hsd_lo ASC";
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id_hh' => $id_hh]);
+
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -220,17 +239,21 @@ class InventoryModel extends BaseModel {
     /**
      * Tự động tính và cập nhật giá bán dựa trên Giá vốn bình quân và % Lợi nhuận
      */
+    /**
+     * Tự động tính và cập nhật giá bán dựa trên Giá vốn bình quân (WAC) của TỒN KHO
+     */
     public function updatePriceForProduct($id_hh) {
         try {
-            $this->db->beginTransaction(); // Bắt đầu giao dịch an toàn
+            $this->db->beginTransaction();
 
-            // 1. Lấy % lợi nhuận (Mặc định 30% nếu không thiết lập)
+            // 1. Lấy % lợi nhuận
             $stmt = $this->db->prepare("SELECT phan_tram_loi_nhuan FROM hang_hoa WHERE id_hh = ?");
             $stmt->execute([$id_hh]);
             $margin = $stmt->fetchColumn();
             $margin = ($margin !== false) ? (float)$margin : 30.0;
 
-            // 2. Tính giá vốn bình quân (WAC)
+            // 2. TÍNH WAC DỰA TRÊN SỐ LƯỢNG CÒN LẠI (SỬA Ở ĐÂY)
+            // Thay vì dùng so_luong_nhap, ta dùng so_luong_con_lai
             $stmt = $this->db->prepare("
                 SELECT SUM(so_luong_con_lai * gia_von_nhap) / SUM(so_luong_con_lai) as avg_cost 
                 FROM lo_hang 
@@ -242,30 +265,130 @@ class InventoryModel extends BaseModel {
             if ($avg_cost > 0) {
                 $new_price = $avg_cost * (1 + ($margin / 100));
 
-                // 3. Lấy thời điểm hiệu lực mới nhất từ bảng 'thoi_diem'
-                // Thay vì hardcode 'TD005', ta lấy bản ghi mới nhất theo ngày bắt đầu
-                $stmt_td = $this->db->query("SELECT id_td FROM thoi_diem ORDER BY ngay_bd_gia_ban DESC LIMIT 1");
+                // 3. Lấy thời điểm hiệu lực
+                $stmt_td = $this->db->query("
+                    SELECT id_td FROM thoi_diem 
+                    WHERE NOW() BETWEEN ngay_bd_gia_ban AND ngay_kt_gia_ban 
+                    LIMIT 1
+                ");
                 $current_td = $stmt_td->fetchColumn();
 
+                if (!$current_td) {
+                    $current_td = $this->db->query("
+                        SELECT id_td FROM thoi_diem 
+                        ORDER BY ngay_bd_gia_ban DESC LIMIT 1
+                    ")->fetchColumn();
+                }
+
                 if ($current_td) {
-                    // 4. Cập nhật giá bán cho tất cả các lô còn tồn của sản phẩm
-                    $sql = "INSERT INTO gia_ban_hien_tai (id_lo, id_td, gia_hien_tai) 
-                            SELECT id_lo, ?, ? 
-                            FROM lo_hang 
-                            WHERE id_hh = ? AND so_luong_con_lai > 0
-                            ON DUPLICATE KEY UPDATE gia_hien_tai = VALUES(gia_hien_tai)";
-                    
-                    $stmt = $this->db->prepare($sql);
-                    $stmt->execute([$current_td, $new_price, $id_hh]);
+                    // 4. Cập nhật giá bán hiện tại
+                    // Xóa giá cũ của sản phẩm này
+                    $this->db->prepare("
+                        DELETE g FROM gia_ban_hien_tai g
+                        JOIN lo_hang l ON g.id_lo = l.id_lo
+                        WHERE l.id_hh = ?
+                    ")->execute([$id_hh]);
+
+                    // Insert giá mới cho tất cả các lô còn tồn
+                    $this->db->prepare("
+                        INSERT INTO gia_ban_hien_tai (id_lo, id_td, gia_hien_tai)
+                        SELECT id_lo, ?, ?
+                        FROM lo_hang
+                        WHERE id_hh = ? AND so_luong_con_lai > 0
+                    ")->execute([$current_td, $new_price, $id_hh]);
                 }
             }
             
-            $this->db->commit(); // Lưu thay đổi
+            $this->db->commit();
             return true;
+
         } catch (\Exception $e) {
-            $this->db->rollBack(); // Hủy thay đổi nếu có lỗi
+            $this->db->rollBack();
             error_log("Error in updatePriceForProduct: " . $e->getMessage());
             return false;
         }
+    }
+
+    public function getLotById($id_lo) {
+        $stmt = $this->db->prepare("SELECT id_hh FROM lo_hang WHERE id_lo = ?");
+        $stmt->execute([$id_lo]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    //  Tự động cập nhật trạng thái khi load trang
+    public function autoUpdateLotStatus() {
+        try {
+            $now = date('Y-m-d H:i:s');
+            
+            // Hết hạn → TTL05
+            $this->db->prepare("
+                UPDATE lo_hang 
+                SET id_trang_thai_lo = 'TTL05'
+                WHERE hsd_lo < ?
+                AND id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
+            ")->execute([$now]);
+
+            // Sắp hết hạn (còn <= 7 ngày) → TTL04
+            $this->db->prepare("
+                UPDATE lo_hang 
+                SET id_trang_thai_lo = 'TTL04'
+                WHERE hsd_lo >= ?
+                AND hsd_lo <= DATE_ADD(?, INTERVAL 7 DAY)
+                AND id_trang_thai_lo NOT IN ('TTL03', 'TTL05')
+            ")->execute([$now, $now]);
+
+            // Sắp hết hàng (còn <= 5) → TTL02
+            $this->db->prepare("
+                UPDATE lo_hang
+                SET id_trang_thai_lo = 'TTL02'
+                WHERE so_luong_con_lai > 0
+                AND so_luong_con_lai <= 5
+                AND hsd_lo >= DATE_ADD(?, INTERVAL 7 DAY)
+                AND id_trang_thai_lo NOT IN ('TTL03', 'TTL04', 'TTL05')
+            ")->execute([$now]);
+
+            // Hết hàng → TTL03
+            $this->db->prepare("
+                UPDATE lo_hang
+                SET id_trang_thai_lo = 'TTL03'
+                WHERE so_luong_con_lai = 0
+                AND id_trang_thai_lo NOT IN ('TTL05')
+            ")->execute([]);
+
+            return true;
+        } catch (\Exception $e) {
+            error_log("autoUpdateLotStatus: " . $e->getMessage());
+            return false;
+        }
+    }
+    public function updateWACAndPrice($id_hh) {
+        // 1. Tính toán WAC (Giống như logic bạn đã viết)
+        $lots = $this->db->query("SELECT so_luong_con_lai, gia_von_nhap FROM lo_hang WHERE id_hh = ? AND so_luong_con_lai > 0", [$id_hh]);
+        
+        $total_qty_remain = 0;
+        $total_value = 0;
+        
+        foreach ($lots as $lot) {
+            $total_qty_remain += $lot['so_luong_con_lai'];
+            $total_value      += ($lot['so_luong_con_lai'] * $lot['gia_von_nhap']);
+        }
+
+        if ($total_qty_remain > 0) {
+            $average_cost = $total_value / $total_qty_remain;
+            
+            // 2. Lấy % lợi nhuận từ bảng hàng hóa
+            $product = $this->db->query("SELECT phan_tram_loi_nhuan FROM hang_hoa WHERE id_hh = ?", [$id_hh])[0];
+            $margin = (float)($product['phan_tram_loi_nhuan'] ?? 30);
+            
+            // 3. Tính giá bán mới
+            $new_price = $average_cost * (1 + ($margin / 100));
+
+            // 4. UPDATE vào bảng giá hiện tại
+            // Giả sử bạn cập nhật vào bảng gia_ban_hien_tai
+            $this->db->execute("UPDATE gia_ban_hien_tai SET gia_hien_tai = ? WHERE id_lo IN (SELECT id_lo FROM lo_hang WHERE id_hh = ?)", 
+                                [$new_price, $id_hh]);
+            return true;
+        }
+        return false;
     }
 }
